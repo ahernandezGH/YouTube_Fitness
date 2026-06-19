@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Entrenamientos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="header">
+    <h2>Mis Entrenamientos</h2>
+    <button id="refreshBtn">Actualizar</button>
+  </div>
+  
+  <div class="filters">
+    <select id="typeFilter">
+      <option value="all">Todos los tipos</option>
+      <option value="upper">Tren Superior</option>
+      <option value="lower">Tren Inferior</option>
+      <option value="full">Cuerpo Completo</option>
+      <option value="core">Core</option>
+      <option value="cardio">Cardio</option>
+    </select>
+    
+    <select id="levelFilter">
+      <option value="all">Todos los niveles</option>
+      <option value="basic">Básico</option>
+      <option value="intermediate">Intermedio</option>
+      <option value="advanced">Avanzado</option>
+    </select>
+  </div>
+
+  <div id="videoList" class="video-list">
+    </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuración</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="options-body">
+  <h2>Configuración de la Extensión</h2>
+
+  <div class="card">
+    <h3>Agregar Canal</h3>
+    <input type="text" id="channelId" placeholder="ID del Canal (ej. UCxxyz...)">
+    <input type="text" id="channelName" placeholder="Nombre (ej. Athlean-X)">
+    <input type="number" id="channelPriority" placeholder="Prioridad (0 es la máxima)" min="0">
+    <button id="addChannelBtn">Agregar Canal</button>
+  </div>
+
+  <div class="card">
+    <h3>Tus Canales Suscritos</h3>
+    <ul id="channelList"></ul>
+    <button id="saveBtn">Guardar Configuración</button>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
