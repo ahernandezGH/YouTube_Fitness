@@ -7,7 +7,8 @@
     "storage"
   ],
   "host_permissions": [
-    "https://www.youtube.com/feeds/videos.xml*"
+    "https://www.youtube.com/feeds/videos.xml*",
+    "https://www.youtube.com/watch*"
   ],
   "action": {
     "default_popup": "popup.html"

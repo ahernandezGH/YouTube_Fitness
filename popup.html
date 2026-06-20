@@ -3,12 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <title>Entrenamientos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="header">
     <h2>Mis Entrenamientos</h2>
     <button id="refreshBtn">Actualizar</button>
+  </div>
+
+  <div class="tabs">
+    <button id="feedTabBtn" class="tab-btn active">Feed</button>
+    <button id="libraryTabBtn" class="tab-btn">Mi Biblioteca</button>
   </div>
   
   <div class="filters">
@@ -19,6 +27,7 @@
       <option value="full">Cuerpo Completo</option>
       <option value="core">Core</option>
       <option value="cardio">Cardio</option>
+      <option value="unknown">Otros / Sin clasificar</option>
     </select>
     
     <select id="levelFilter">
@@ -27,6 +36,15 @@
       <option value="intermediate">Intermedio</option>
       <option value="advanced">Avanzado</option>
     </select>
+    
+    <select id="channelFilter">
+      <option value="all">Todos los canales</option>
+    </select>
+  </div>
+
+  <div id="addVideoForm" style="display: none; gap: 8px; margin-bottom: 15px; padding: 10px; background-color: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--card-border); align-items: center;">
+    <input type="text" id="videoUrlInput" placeholder="Pega la URL de un video..." style="flex: 1; padding: 6px 10px; font-size: 12px; margin: 0;">
+    <button id="addVideoUrlBtn" style="padding: 8px 12px; font-size: 12px; font-weight: 600;">Añadir</button>
   </div>
 
   <div id="videoList" class="video-list">

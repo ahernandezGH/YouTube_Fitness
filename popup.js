@@ -1,9 +1,9 @@
 const CATEGORIES = {
-  upper: ['pecho', 'espalda', 'brazo', 'hombro', 'upper', 'biceps', 'triceps', 'chest', 'back'],
-  lower: ['pierna', 'gluteo', 'lower', 'leg', 'squat', 'pantorrilla', 'quads'],
-  full: ['completo', 'full body', 'todo el cuerpo'],
-  core: ['abdomen', 'core', 'abs', 'oblicuos', 'six pack'],
-  cardio: ['cardio', 'hiit', 'tabata', 'quemar', 'sudor']
+  cardio: ['cardio', 'hiit', 'tabata', 'quemar', 'sudor', 'emom', 'amrap', 'aerobico', 'running', 'correr', 'lazo', 'cuerda', 'jumping', 'resistencia', 'metcon'],
+  core: ['abdomen', 'core', 'abs', 'oblicuos', 'six pack', 'plank', 'plancha', 'crunch', 'abdominales', 'abdominals', 'lumbar', 'lumbares', 'sit up', 'sit-up'],
+  upper: ['pecho', 'espalda', 'brazo', 'hombro', 'upper', 'biceps', 'triceps', 'chest', 'back', 'pull up', 'push up', 'dominadas', 'lagartijas', 'hombros'],
+  lower: ['pierna', 'gluteo', 'lower', 'leg', 'squat', 'pantorrilla', 'quads', 'femoral', 'isquio', 'gemelos', 'zancada', 'lunges', 'peso muerto', 'deadlift'],
+  full: ['completo', 'full body', 'todo el cuerpo', 'fullbody', 'cuerpo completo']
 };
 
 const LEVELS = {
@@ -12,29 +12,161 @@ const LEVELS = {
   advanced: ['avanzado', 'intenso', 'pro', 'advanced', 'hardcore', 'extremo']
 };
 
+const CATEGORY_NAMES = {
+  upper: 'Tren Superior',
+  lower: 'Tren Inferior',
+  full: 'Cuerpo Completo',
+  core: 'Core',
+  cardio: 'Cardio',
+  unknown: 'Otros'
+};
+
 let allVideos = [];
+let library = [];
+let activeTab = 'feed';
 
 document.addEventListener('DOMContentLoaded', () => {
+  const feedTabBtn = document.getElementById('feedTabBtn');
+  const libraryTabBtn = document.getElementById('libraryTabBtn');
+
+  feedTabBtn.addEventListener('click', () => {
+    activeTab = 'feed';
+    feedTabBtn.classList.add('active');
+    libraryTabBtn.classList.remove('active');
+    renderVideos();
+  });
+
+  libraryTabBtn.addEventListener('click', () => {
+    activeTab = 'library';
+    libraryTabBtn.classList.add('active');
+    feedTabBtn.classList.remove('active');
+    renderVideos();
+  });
+
   document.getElementById('refreshBtn').addEventListener('click', loadVideos);
   document.getElementById('typeFilter').addEventListener('change', renderVideos);
   document.getElementById('levelFilter').addEventListener('change', renderVideos);
+  document.getElementById('channelFilter').addEventListener('change', renderVideos);
+
+  const videoListEl = document.getElementById('videoList');
+  
+  videoListEl.addEventListener('click', (e) => {
+    const target = e.target;
+    
+    // Botón Guardar
+    if (target.classList.contains('btn-save')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = target.getAttribute('data-id');
+      saveToLibrary(id);
+      return;
+    }
+    
+    // Botón Favorito (estrella)
+    if (target.closest('.btn-favorite')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const btn = target.closest('.btn-favorite');
+      const id = btn.getAttribute('data-id');
+      toggleLibraryVideoFavorite(id);
+      return;
+    }
+    
+    // Botón Eliminar
+    if (target.classList.contains('btn-remove')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = target.getAttribute('data-id');
+      removeFromLibrary(id);
+      return;
+    }
+
+    // Clic en la tarjeta para abrir el video en YouTube
+    const videoItem = target.closest('.video-item');
+    if (videoItem) {
+      if (target.tagName === 'SELECT' || target.tagName === 'OPTION') {
+        return;
+      }
+      const id = videoItem.getAttribute('data-id');
+      window.open(`https://www.youtube.com/watch?v=${id}`, '_blank');
+    }
+  });
+
+  videoListEl.addEventListener('change', (e) => {
+    const target = e.target;
+    if (target.classList.contains('library-select')) {
+      const id = target.getAttribute('data-id');
+      updateLibraryVideoCategory(id, target.value);
+    }
+  });
+
+  const addVideoUrlBtn = document.getElementById('addVideoUrlBtn');
+  if (addVideoUrlBtn) {
+    addVideoUrlBtn.addEventListener('click', addVideoByUrl);
+  }
   
   loadVideos();
 });
+
+async function getVideoDuration(videoId) {
+  try {
+    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
+    if (!response.ok) return null;
+    const html = await response.text();
+    const match = html.match(/"lengthSeconds"\s*:\s*"(\d+)"/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+  } catch (e) {
+    console.error('Error fetching duration for video:', videoId, e);
+  }
+  return null;
+}
+
+function formatDuration(seconds) {
+  if (!seconds) return '';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 async function loadVideos() {
   const videoListEl = document.getElementById('videoList');
   videoListEl.innerHTML = 'Cargando videos...';
 
-  chrome.storage.local.get(['channels'], async (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount'], async (data) => {
+    library = data.library || [];
+    const sliceCount = data.sliceCount !== undefined ? data.sliceCount : 5;
+    const offsetCount = data.offsetCount !== undefined ? data.offsetCount : 0;
+
+    const channelFilterEl = document.getElementById('channelFilter');
+    if (channelFilterEl && data.channels) {
+      const currentSelected = channelFilterEl.value;
+      channelFilterEl.innerHTML = '<option value="all">Todos los canales</option>';
+      data.channels.forEach(ch => {
+        const opt = document.createElement('option');
+        opt.value = ch.name;
+        opt.textContent = ch.name;
+        channelFilterEl.appendChild(opt);
+      });
+      if (Array.from(channelFilterEl.options).some(o => o.value === currentSelected)) {
+        channelFilterEl.value = currentSelected;
+      }
+    }
+
     if (!data.channels || data.channels.length === 0) {
       videoListEl.innerHTML = 'Falta configuración. Haz clic derecho en el ícono y ve a "Opciones" para agregar canales.';
       return;
     }
 
+    const minDuration = data.minDuration !== undefined ? data.minDuration : 10;
     allVideos = [];
     
-    for (const channel of data.channels) {
+    const fetchPromises = data.channels.map(async (channel) => {
       try {
         const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`;
         const response = await fetch(rssUrl);
@@ -43,10 +175,9 @@ async function loadVideos() {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(text, "text/xml");
         
-        const entries = Array.from(xmlDoc.getElementsByTagName('entry')).slice(0, 5); 
+        const entries = Array.from(xmlDoc.getElementsByTagName('entry')).slice(offsetCount, offsetCount + sliceCount); 
         
-        entries.forEach(entry => {
-          // Uso de ?. (optional chaining) para evitar errores si YouTube omite una etiqueta
+        const entryPromises = entries.map(async (entry) => {
           const title = entry.getElementsByTagName('title')[0]?.textContent || 'Sin título';
           const videoId = entry.getElementsByTagName('yt:videoId')[0]?.textContent || '';
           const date = entry.getElementsByTagName('published')[0]?.textContent || new Date().toISOString();
@@ -56,7 +187,17 @@ async function loadVideos() {
           const thumbnail = mediaGroup?.getElementsByTagName('media:thumbnail')[0]?.getAttribute('url') || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
           if (videoId) {
+            if (library.some(libVid => libVid.id === videoId)) {
+              return;
+            }
             const textToAnalyze = (title + " " + desc).toLowerCase();
+            const durationSeconds = await getVideoDuration(videoId);
+            
+            // Si tiene duración y es menor al filtro, lo omitimos
+            if (durationSeconds !== null && (durationSeconds / 60) < minDuration) {
+              return;
+            }
+
             allVideos.push({
               id: videoId,
               title: title,
@@ -64,15 +205,20 @@ async function loadVideos() {
               channelName: channel.name,
               priority: channel.priority,
               date: date,
-              type: classifyText(textToAnalyze, CATEGORIES),
-              level: classifyText(textToAnalyze, LEVELS) || 'basic'
+              types: classifyTextMultiple(textToAnalyze, CATEGORIES),
+              level: classifyText(textToAnalyze, LEVELS) || 'basic',
+              durationSeconds: durationSeconds
             });
           }
         });
+
+        await Promise.all(entryPromises);
       } catch (error) {
         console.error('Error leyendo el RSS del canal:', channel.name, error);
       }
-    }
+    });
+
+    await Promise.all(fetchPromises);
 
     allVideos.sort((a, b) => {
       if (a.priority !== b.priority) {
@@ -94,41 +240,257 @@ function classifyText(text, dictionary) {
   return 'unknown';
 }
 
+function classifyTextMultiple(text, dictionary) {
+  const matched = [];
+  for (const [category, keywords] of Object.entries(dictionary)) {
+    if (keywords.some(kw => text.includes(kw))) {
+      matched.push(category);
+    }
+  }
+  return matched.length > 0 ? matched : ['unknown'];
+}
+
+function saveToLibrary(videoId) {
+  const video = allVideos.find(v => v.id === videoId);
+  if (!video) return;
+  const defaultCategory = video.types && video.types.length > 0 ? video.types[0] : 'unknown';
+  
+  const libVideo = {
+    id: video.id,
+    title: video.title,
+    thumbnail: video.thumbnail,
+    channelName: video.channelName,
+    priority: video.priority,
+    date: video.date,
+    level: video.level,
+    durationSeconds: video.durationSeconds,
+    types: video.types,
+    category: defaultCategory,
+    favorite: false
+  };
+
+  library.push(libVideo);
+  chrome.storage.local.set({ library }, () => {
+    allVideos = allVideos.filter(v => v.id !== videoId);
+    renderVideos();
+  });
+}
+
+function removeFromLibrary(videoId) {
+  library = library.filter(v => v.id !== videoId);
+  chrome.storage.local.set({ library }, () => {
+    loadVideos();
+  });
+}
+
+function toggleLibraryVideoFavorite(videoId) {
+  const video = library.find(v => v.id === videoId);
+  if (video) {
+    video.favorite = !video.favorite;
+    chrome.storage.local.set({ library }, () => {
+      renderVideos();
+    });
+  }
+}
+
+function updateLibraryVideoCategory(videoId, newCategory) {
+  const video = library.find(v => v.id === videoId);
+  if (video) {
+    video.category = newCategory;
+    chrome.storage.local.set({ library }, () => {
+      renderVideos();
+    });
+  }
+}
+
 function renderVideos() {
   const typeFilter = document.getElementById('typeFilter').value;
   const levelFilter = document.getElementById('levelFilter').value;
+  const channelFilter = document.getElementById('channelFilter').value;
   const videoListEl = document.getElementById('videoList');
+  
+  const addVideoForm = document.getElementById('addVideoForm');
+  if (addVideoForm) {
+    addVideoForm.style.display = activeTab === 'library' ? 'flex' : 'none';
+  }
   
   videoListEl.innerHTML = '';
 
-  const filteredVideos = allVideos.filter(v => {
-    const matchType = typeFilter === 'all' || v.type === typeFilter;
-    const matchLevel = levelFilter === 'all' || v.level === levelFilter;
-    return matchType && matchLevel;
-  });
+  if (activeTab === 'feed') {
+    const filteredVideos = allVideos.filter(v => {
+      const matchType = typeFilter === 'all' || v.types.includes(typeFilter);
+      const matchLevel = levelFilter === 'all' || v.level === levelFilter;
+      const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
+      return matchType && matchLevel && matchChannel;
+    });
 
-  if (filteredVideos.length === 0) {
-    videoListEl.innerHTML = 'No se encontraron videos con esos filtros.';
+    if (filteredVideos.length === 0) {
+      videoListEl.innerHTML = 'No se encontraron videos con esos filtros.';
+      return;
+    }
+
+    filteredVideos.forEach(v => {
+      const card = document.createElement('div');
+      card.className = 'video-item';
+      card.setAttribute('data-id', v.id);
+
+      const categoryBadges = v.types.map(t => {
+        const name = CATEGORY_NAMES[t] || 'Otros';
+        return `<span class="badge">${name.toUpperCase()}</span>`;
+      }).join(' ');
+
+      const durationBadge = v.durationSeconds ? `<span class="badge duration" style="background-color: #555;">${formatDuration(v.durationSeconds)}</span>` : '';
+
+      card.innerHTML = `
+        <img src="${v.thumbnail}" class="thumbnail" alt="thumbnail">
+        <div class="video-info">
+          <div class="video-title">${v.title}</div>
+          <div class="badges">
+            <span class="badge priority">Prio: ${v.priority}</span>
+            <span class="badge">${v.channelName}</span>
+            ${categoryBadges}
+            <span class="badge">${v.level.toUpperCase()}</span>
+            ${durationBadge}
+          </div>
+        </div>
+        <div class="video-actions">
+          <button class="btn-save" data-id="${v.id}">Guardar</button>
+        </div>
+      `;
+      videoListEl.appendChild(card);
+    });
+  } else {
+    // Biblioteca
+    const filteredVideos = library.filter(v => {
+      const matchType = typeFilter === 'all' || v.category === typeFilter;
+      const matchLevel = levelFilter === 'all' || v.level === levelFilter;
+      const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
+      return matchType && matchLevel && matchChannel;
+    });
+
+    const sortedLibrary = [...filteredVideos].sort((a, b) => {
+      if (a.favorite !== b.favorite) {
+        return a.favorite ? -1 : 1;
+      }
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+
+    if (sortedLibrary.length === 0) {
+      videoListEl.innerHTML = 'Tu biblioteca está vacía o no hay videos que coincidan con los filtros.';
+      return;
+    }
+
+    sortedLibrary.forEach(v => {
+      const card = document.createElement('div');
+      card.className = 'video-item';
+      card.setAttribute('data-id', v.id);
+
+      const durationBadge = v.durationSeconds ? `<span class="badge duration" style="background-color: #555;">${formatDuration(v.durationSeconds)}</span>` : '';
+
+      const selectOptions = Object.entries(CATEGORY_NAMES).map(([key, label]) => {
+        return `<option value="${key}" ${v.category === key ? 'selected' : ''}>${label}</option>`;
+      }).join('');
+
+      card.innerHTML = `
+        <img src="${v.thumbnail}" class="thumbnail" alt="thumbnail">
+        <div class="video-info">
+          <div class="video-title">${v.title}</div>
+          <div class="badges">
+            <span class="badge priority">Prio: ${v.priority}</span>
+            <span class="badge">${v.channelName}</span>
+            <span class="badge">${v.level.toUpperCase()}</span>
+            ${durationBadge}
+          </div>
+        </div>
+        <div class="video-actions">
+          <button class="btn-favorite ${v.favorite ? 'active' : ''}" data-id="${v.id}">${v.favorite ? '★' : '☆'}</button>
+          <select class="library-select" data-id="${v.id}">
+            ${selectOptions}
+          </select>
+          <button class="btn-danger btn-remove" data-id="${v.id}">Eliminar</button>
+        </div>
+      `;
+      videoListEl.appendChild(card);
+    });
+  }
+}
+
+function extractVideoId(url) {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
+
+async function addVideoByUrl() {
+  const urlInput = document.getElementById('videoUrlInput');
+  const addBtn = document.getElementById('addVideoUrlBtn');
+  const url = urlInput.value.trim();
+  
+  const videoId = extractVideoId(url);
+  if (!videoId) {
+    alert('Por favor, introduce una URL de YouTube válida.');
     return;
   }
 
-  filteredVideos.forEach(v => {
-    const a = document.createElement('a');
-    a.href = `https://www.youtube.com/watch?v=${v.id}`;
-    a.target = '_blank';
-    a.className = 'video-item';
+  if (library.some(v => v.id === videoId)) {
+    alert('Este video ya está guardado en tu biblioteca.');
+    return;
+  }
 
-    a.innerHTML = `
-      <img src="${v.thumbnail}" class="thumbnail" alt="thumbnail">
-      <div class="video-info">
-        <div class="video-title">${v.title}</div>
-        <div class="badges">
-          <span class="badge priority">Prio: ${v.priority}</span>
-          <span class="badge">${v.channelName}</span>
-          <span class="badge">${v.level.toUpperCase()}</span>
-        </div>
-      </div>
-    `;
-    videoListEl.appendChild(a);
-  });
+  addBtn.disabled = true;
+  addBtn.textContent = 'Cargando...';
+
+  try {
+    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
+    if (!response.ok) throw new Error('No se pudo acceder al video.');
+    const html = await response.text();
+
+    const titleMatch = html.match(/<title>(.*?)<\/title>/);
+    let title = titleMatch ? titleMatch[1] : 'Sin título';
+    title = title.replace(/\s*-\s*YouTube$/, '');
+
+    const authorMatch = html.match(/"author"\s*:\s*"([^"]+)"/);
+    const channelName = authorMatch ? authorMatch[1] : 'Canal manual';
+
+    const descMatch = html.match(/"shortDescription"\s*:\s*"([^"]+)"/);
+    const desc = descMatch ? descMatch[1] : '';
+
+    const durationMatch = html.match(/"lengthSeconds"\s*:\s*"(\d+)"/);
+    const durationSeconds = durationMatch ? parseInt(durationMatch[1], 10) : null;
+
+    const textToAnalyze = (title + " " + desc).toLowerCase();
+    const types = classifyTextMultiple(textToAnalyze, CATEGORIES);
+    const defaultCategory = types && types.length > 0 ? types[0] : 'unknown';
+    const level = classifyText(textToAnalyze, LEVELS) || 'basic';
+
+    const newVideo = {
+      id: videoId,
+      title: title,
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      channelName: channelName,
+      priority: 99,
+      date: new Date().toISOString(),
+      level: level,
+      durationSeconds: durationSeconds,
+      types: types,
+      category: defaultCategory,
+      favorite: false
+    };
+
+    library.push(newVideo);
+    chrome.storage.local.set({ library }, () => {
+      urlInput.value = '';
+      renderVideos();
+    });
+  } catch (error) {
+    console.error('Error al agregar el video por URL:', error);
+    alert('Error al recuperar información del video. Por favor, inténtalo de nuevo.');
+  } finally {
+    addBtn.disabled = false;
+    addBtn.textContent = 'Añadir';
+  }
 }

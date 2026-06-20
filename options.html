@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Configuración</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="options-body">
@@ -17,9 +20,35 @@
   </div>
 
   <div class="card">
+    <h3>Configuración del Feed</h3>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+      <label for="minDuration" style="flex: 2;">Ocultar videos de menos de (minutos):</label>
+      <input type="number" id="minDuration" value="10" min="0" style="max-width: 80px; flex: 1;">
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+      <label for="sliceCount" style="flex: 2;">Cantidad de videos por canal:</label>
+      <input type="number" id="sliceCount" value="5" min="1" max="15" style="max-width: 80px; flex: 1;">
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+      <label for="offsetCount" style="flex: 2;">Videos a omitir al inicio (Offset):</label>
+      <input type="number" id="offsetCount" value="0" min="0" max="14" style="max-width: 80px; flex: 1;">
+    </div>
+  </div>
+
+  <div class="card">
     <h3>Tus Canales Suscritos</h3>
     <ul id="channelList"></ul>
     <button id="saveBtn">Guardar Configuración</button>
+  </div>
+
+  <div class="card">
+    <h3>Copia de Seguridad (Backup)</h3>
+    <p style="font-size: 12px; color: #aaa; margin-top: 0;">Exporta o importa la lista de tus canales y filtros.</p>
+    <div style="display: flex; gap: 10px;">
+      <button id="exportBtn" style="background-color: #444; flex: 1;">Exportar JSON</button>
+      <button id="importBtn" style="background-color: #444; flex: 1;">Importar JSON</button>
+      <input type="file" id="importFile" accept=".json" style="display: none;">
+    </div>
   </div>
 
   <script src="options.js"></script>
