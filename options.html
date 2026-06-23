@@ -42,8 +42,20 @@
   </div>
 
   <div class="card">
+    <h3>Etiquetas Personalizadas (Biblioteca)</h3>
+    <p style="font-size: 12px; color: #aaa; margin-top: 0;">Agrega etiquetas para clasificar adicionalmente los videos en tu biblioteca. Ej: "Cardio", "Fuerza", "Estiramiento".</p>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+      <input type="text" id="newTagInput" placeholder="Nueva etiqueta" style="flex: 1;">
+      <button id="addTagBtn" style="white-space: nowrap;">Agregar Etiqueta</button>
+    </div>
+    <div id="customTagsContainer" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px;">
+      <!-- Labels will be added here -->
+    </div>
+  </div>
+
+  <div class="card">
     <h3>Copia de Seguridad (Backup)</h3>
-    <p style="font-size: 12px; color: #aaa; margin-top: 0;">Exporta o importa la lista de tus canales y filtros.</p>
+    <p style="font-size: 12px; color: #aaa; margin-top: 0;">Exporta o importa la configuración, canales, biblioteca y etiquetas personalizadas.</p>
     <div style="display: flex; gap: 10px;">
       <button id="exportBtn" style="background-color: #444; flex: 1;">Exportar JSON</button>
       <button id="importBtn" style="background-color: #444; flex: 1;">Importar JSON</button>

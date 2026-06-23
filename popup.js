@@ -23,6 +23,8 @@ const CATEGORY_NAMES = {
 
 let allVideos = [];
 let library = [];
+let customTags = [];
+let currentActiveTabUrl = null;
 let activeTab = 'feed';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     activeTab = 'library';
     libraryTabBtn.classList.add('active');
     feedTabBtn.classList.remove('active');
+    document.getElementById('activeTabAlert').style.display = 'none'; // Hide banner in library
     renderVideos();
   });
 
@@ -47,6 +50,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('typeFilter').addEventListener('change', renderVideos);
   document.getElementById('levelFilter').addEventListener('change', renderVideos);
   document.getElementById('channelFilter').addEventListener('change', renderVideos);
+  document.getElementById('customTagFilter').addEventListener('change', renderVideos);
+
+  const saveActiveTabBtn = document.getElementById('saveActiveTabBtn');
+  if (saveActiveTabBtn) {
+    saveActiveTabBtn.addEventListener('click', () => {
+      if (currentActiveTabUrl) {
+        addVideoFromUrl(currentActiveTabUrl, saveActiveTabBtn);
+      }
+    });
+  }
 
   const videoListEl = document.getElementById('videoList');
   
@@ -84,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clic en la tarjeta para abrir el video en YouTube
     const videoItem = target.closest('.video-item');
     if (videoItem) {
-      if (target.tagName === 'SELECT' || target.tagName === 'OPTION') {
+      if (target.closest('select')) {
         return;
       }
       const id = videoItem.getAttribute('data-id');
@@ -97,6 +110,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (target.classList.contains('library-select')) {
       const id = target.getAttribute('data-id');
       updateLibraryVideoCategory(id, target.value);
+    } else if (target.classList.contains('library-level-select')) {
+      const id = target.getAttribute('data-id');
+      updateLibraryVideoLevel(id, target.value);
+    } else if (target.classList.contains('library-tag-select')) {
+      const id = target.getAttribute('data-id');
+      updateLibraryVideoTag(id, target.value);
     }
   });
 
@@ -138,8 +157,9 @@ async function loadVideos() {
   const videoListEl = document.getElementById('videoList');
   videoListEl.innerHTML = 'Cargando videos...';
 
-  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount'], async (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount', 'customTags'], async (data) => {
     library = data.library || [];
+    customTags = data.customTags || [];
     const sliceCount = data.sliceCount !== undefined ? data.sliceCount : 5;
     const offsetCount = data.offsetCount !== undefined ? data.offsetCount : 0;
 
@@ -162,6 +182,36 @@ async function loadVideos() {
       videoListEl.innerHTML = 'Falta configuración. Haz clic derecho en el ícono y ve a "Opciones" para agregar canales.';
       return;
     }
+
+    const tagFilterEl = document.getElementById('customTagFilter');
+    if (tagFilterEl) {
+      const currentSelected = tagFilterEl.value;
+      tagFilterEl.innerHTML = '<option value="all">Todas las etiquetas</option>';
+      customTags.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        tagFilterEl.appendChild(opt);
+      });
+      if (Array.from(tagFilterEl.options).some(o => o.value === currentSelected)) {
+        tagFilterEl.value = currentSelected;
+      }
+    }
+
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+      if (tabs && tabs.length > 0 && tabs[0].url) {
+        const url = tabs[0].url;
+        const videoId = extractVideoId(url);
+        if (videoId && !library.some(v => v.id === videoId)) {
+          currentActiveTabUrl = url;
+          if (activeTab === 'feed') {
+            document.getElementById('activeTabAlert').style.display = 'flex';
+          }
+        } else {
+          document.getElementById('activeTabAlert').style.display = 'none';
+        }
+      }
+    });
 
     const minDuration = data.minDuration !== undefined ? data.minDuration : 10;
     allVideos = [];
@@ -266,7 +316,8 @@ function saveToLibrary(videoId) {
     durationSeconds: video.durationSeconds,
     types: video.types,
     category: defaultCategory,
-    favorite: false
+    favorite: false,
+    customTag: ''
   };
 
   library.push(libVideo);
@@ -303,15 +354,41 @@ function updateLibraryVideoCategory(videoId, newCategory) {
   }
 }
 
+function updateLibraryVideoLevel(videoId, newLevel) {
+  const video = library.find(v => v.id === videoId);
+  if (video) {
+    video.level = newLevel;
+    chrome.storage.local.set({ library }, () => {
+      renderVideos();
+    });
+  }
+}
+
+function updateLibraryVideoTag(videoId, newTag) {
+  const video = library.find(v => v.id === videoId);
+  if (video) {
+    video.customTag = newTag;
+    chrome.storage.local.set({ library }, () => {
+      renderVideos();
+    });
+  }
+}
+
 function renderVideos() {
   const typeFilter = document.getElementById('typeFilter').value;
   const levelFilter = document.getElementById('levelFilter').value;
   const channelFilter = document.getElementById('channelFilter').value;
+  const customTagFilterEl = document.getElementById('customTagFilter');
+  const customTagFilter = customTagFilterEl ? customTagFilterEl.value : 'all';
   const videoListEl = document.getElementById('videoList');
   
   const addVideoForm = document.getElementById('addVideoForm');
   if (addVideoForm) {
     addVideoForm.style.display = activeTab === 'library' ? 'flex' : 'none';
+  }
+
+  if (customTagFilterEl) {
+    customTagFilterEl.style.display = (activeTab === 'library' && customTags.length > 0) ? 'inline-block' : 'none';
   }
   
   videoListEl.innerHTML = '';
@@ -365,7 +442,8 @@ function renderVideos() {
       const matchType = typeFilter === 'all' || v.category === typeFilter;
       const matchLevel = levelFilter === 'all' || v.level === levelFilter;
       const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
-      return matchType && matchLevel && matchChannel;
+      const matchCustomTag = customTagFilter === 'all' || v.customTag === customTagFilter;
+      return matchType && matchLevel && matchChannel && matchCustomTag;
     });
 
     const sortedLibrary = [...filteredVideos].sort((a, b) => {
@@ -394,6 +472,14 @@ function renderVideos() {
         return `<option value="${key}" ${v.category === key ? 'selected' : ''}>${label}</option>`;
       }).join('');
 
+      const levelOptions = Object.entries(LEVELS).map(([key, labelList]) => {
+        return `<option value="${key}" ${v.level === key ? 'selected' : ''}>${key.toUpperCase()}</option>`;
+      }).join('');
+
+      const tagOptions = `<option value="">Sin etiqueta</option>` + customTags.map(t => {
+        return `<option value="${t}" ${v.customTag === t ? 'selected' : ''}>${t}</option>`;
+      }).join('');
+
       card.innerHTML = `
         <img src="${v.thumbnail}" class="thumbnail" alt="thumbnail">
         <div class="video-info">
@@ -401,7 +487,10 @@ function renderVideos() {
           <div class="badges">
             <span class="badge priority">Prio: ${v.priority}</span>
             <span class="badge">${v.channelName}</span>
-            <span class="badge">${v.level.toUpperCase()}</span>
+            <select class="library-level-select badge" data-id="${v.id}" style="background:var(--card-bg); border:1px solid #444; color:var(--text-color); cursor:pointer;">
+              ${levelOptions}
+            </select>
+            ${customTags.length > 0 ? `<select class="library-tag-select badge" data-id="${v.id}" style="background:#444; border:none; color:var(--text-color); cursor:pointer;">${tagOptions}</select>` : ''}
             ${durationBadge}
           </div>
         </div>
@@ -430,6 +519,12 @@ async function addVideoByUrl() {
   const addBtn = document.getElementById('addVideoUrlBtn');
   const url = urlInput.value.trim();
   
+  if (!url) return;
+  await addVideoFromUrl(url, addBtn);
+  urlInput.value = '';
+}
+
+async function addVideoFromUrl(url, addBtn) {
   const videoId = extractVideoId(url);
   if (!videoId) {
     alert('Por favor, introduce una URL de YouTube válida.');
@@ -478,12 +573,13 @@ async function addVideoByUrl() {
       durationSeconds: durationSeconds,
       types: types,
       category: defaultCategory,
-      favorite: false
+      favorite: false,
+      customTag: ''
     };
 
     library.push(newVideo);
     chrome.storage.local.set({ library }, () => {
-      urlInput.value = '';
+      document.getElementById('activeTabAlert').style.display = 'none';
       renderVideos();
     });
   } catch (error) {

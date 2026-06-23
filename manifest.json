@@ -4,7 +4,8 @@
   "version": "1.1",
   "description": "Filtra y prioriza tus videos de entrenamiento de YouTube sin API Keys.",
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab"
   ],
   "host_permissions": [
     "https://www.youtube.com/feeds/videos.xml*",

@@ -14,6 +14,11 @@
     <button id="refreshBtn">Actualizar</button>
   </div>
 
+  <div id="activeTabAlert" style="display: none; background-color: rgba(66, 133, 244, 0.1); border-left: 3px solid #4285f4; padding: 10px; margin: 10px 15px; border-radius: 4px; font-size: 13px; align-items: center; justify-content: space-between;">
+    <span style="flex: 1;">Video de YouTube detectado. Puedes guardarlo en tu biblioteca.</span>
+    <button id="saveActiveTabBtn" style="padding: 6px 10px; font-size: 12px; margin-left: 10px; background-color: #4285f4; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: 600;">Guardar</button>
+  </div>
+
   <div class="tabs">
     <button id="feedTabBtn" class="tab-btn active">Feed</button>
     <button id="libraryTabBtn" class="tab-btn">Mi Biblioteca</button>
@@ -39,6 +44,10 @@
     
     <select id="channelFilter">
       <option value="all">Todos los canales</option>
+    </select>
+
+    <select id="customTagFilter" style="display: none;">
+      <option value="all">Todas las etiquetas</option>
     </select>
   </div>
 

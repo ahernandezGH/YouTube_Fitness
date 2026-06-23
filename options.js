@@ -1,11 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
   const channelListEl = document.getElementById('channelList');
+  const customTagsContainer = document.getElementById('customTagsContainer');
   let channels = [];
+  let customTags = [];
 
-  chrome.storage.local.get(['channels', 'minDuration', 'sliceCount', 'offsetCount'], (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags'], (data) => {
     if (data.channels) {
       channels = data.channels;
       renderChannels();
+    }
+    if (data.customTags) {
+      customTags = data.customTags;
+      renderCustomTags();
     }
     const minDurationInput = document.getElementById('minDuration');
     if (minDurationInput) {
@@ -35,6 +41,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  document.getElementById('addTagBtn').addEventListener('click', () => {
+    const newTag = document.getElementById('newTagInput').value.trim();
+    if (newTag && !customTags.includes(newTag)) {
+      customTags.push(newTag);
+      chrome.storage.local.set({ customTags }, () => {
+        renderCustomTags();
+        document.getElementById('newTagInput').value = '';
+      });
+    }
+  });
+
   document.getElementById('saveBtn').addEventListener('click', () => {
     const minDuration = parseInt(document.getElementById('minDuration').value);
     const sliceCount = parseInt(document.getElementById('sliceCount').value);
@@ -42,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     chrome.storage.local.set({
       channels,
+      customTags,
       minDuration: isNaN(minDuration) ? 10 : minDuration,
       sliceCount: isNaN(sliceCount) ? 5 : sliceCount,
       offsetCount: isNaN(offsetCount) ? 0 : offsetCount
@@ -52,23 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Exportar Configuración
   document.getElementById('exportBtn').addEventListener('click', () => {
-    const minDuration = parseInt(document.getElementById('minDuration').value) || 10;
-    const sliceCount = parseInt(document.getElementById('sliceCount').value) || 5;
-    const offsetCount = parseInt(document.getElementById('offsetCount').value) || 0;
-    const backupData = {
-      channels: channels,
-      minDuration: minDuration,
-      sliceCount: sliceCount,
-      offsetCount: offsetCount
-    };
-    
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "youtube_fitness_backup.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    chrome.storage.local.get(null, (allData) => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "youtube_fitness_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
   });
 
   // Importar Configuración
@@ -85,26 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.onload = (event) => {
       try {
         const importedData = JSON.parse(event.target.result);
-        if (importedData && Array.isArray(importedData.channels)) {
-          channels = importedData.channels;
-          renderChannels();
-
-          if (importedData.minDuration !== undefined) {
-            document.getElementById('minDuration').value = importedData.minDuration;
-          }
-          if (importedData.sliceCount !== undefined) {
-            document.getElementById('sliceCount').value = importedData.sliceCount;
-          }
-          if (importedData.offsetCount !== undefined) {
-            document.getElementById('offsetCount').value = importedData.offsetCount;
-          }
-
-          const minDuration = parseInt(document.getElementById('minDuration').value) || 10;
-          const sliceCount = parseInt(document.getElementById('sliceCount').value) || 5;
-          const offsetCount = parseInt(document.getElementById('offsetCount').value) || 0;
-          
-          chrome.storage.local.set({ channels, minDuration, sliceCount, offsetCount }, () => {
-            alert('Configuración importada y guardada correctamente.');
+        if (importedData && typeof importedData === 'object') {
+          chrome.storage.local.set(importedData, () => {
+            alert('Configuración y biblioteca importadas y guardadas correctamente. La página se recargará.');
+            window.location.reload();
           });
         } else {
           alert('El archivo no tiene un formato de respaldo válido.');
@@ -131,6 +125,40 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       li.appendChild(delBtn);
       channelListEl.appendChild(li);
+    });
+  }
+
+  function renderCustomTags() {
+    customTagsContainer.innerHTML = '';
+    customTags.forEach((tag, index) => {
+      const span = document.createElement('span');
+      span.textContent = tag;
+      span.style.background = '#444';
+      span.style.padding = '4px 8px';
+      span.style.borderRadius = '12px';
+      span.style.fontSize = '12px';
+      span.style.display = 'flex';
+      span.style.alignItems = 'center';
+      span.style.gap = '5px';
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'x';
+      delBtn.style.background = 'transparent';
+      delBtn.style.border = 'none';
+      delBtn.style.color = '#ff6b6b';
+      delBtn.style.padding = '0';
+      delBtn.style.margin = '0';
+      delBtn.style.fontSize = '14px';
+      delBtn.style.cursor = 'pointer';
+      delBtn.addEventListener('click', () => {
+        customTags.splice(index, 1);
+        chrome.storage.local.set({ customTags }, () => {
+          renderCustomTags();
+        });
+      });
+
+      span.appendChild(delBtn);
+      customTagsContainer.appendChild(span);
     });
   }
 });

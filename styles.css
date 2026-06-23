@@ -351,9 +351,19 @@ li {
   border-radius: 6px;
   max-width: 120px;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .library-select:focus {
   border-color: var(--primary-color);
   box-shadow: none;
+}
+
+select.badge {
+  flex: 0 0 auto !important;
+  height: auto;
+  min-height: 0;
+  appearance: auto;
+  -webkit-appearance: auto;
+  padding-right: 18px !important;
 }
