@@ -24,6 +24,7 @@ const CATEGORY_NAMES = {
 let allVideos = [];
 let library = [];
 let customTags = [];
+let discarded = [];
 let currentActiveTabUrl = null;
 let activeTab = 'feed';
 
@@ -72,6 +73,15 @@ document.addEventListener('DOMContentLoaded', () => {
       e.stopPropagation();
       const id = target.getAttribute('data-id');
       saveToLibrary(id);
+      return;
+    }
+    
+    // Botón Ocultar/Descartar
+    if (target.classList.contains('btn-discard')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = target.getAttribute('data-id');
+      discardVideo(id);
       return;
     }
     
@@ -157,9 +167,10 @@ async function loadVideos() {
   const videoListEl = document.getElementById('videoList');
   videoListEl.innerHTML = 'Cargando videos...';
 
-  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount', 'customTags'], async (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount', 'customTags', 'discarded'], async (data) => {
     library = data.library || [];
     customTags = data.customTags || [];
+    discarded = data.discarded || [];
     const sliceCount = data.sliceCount !== undefined ? data.sliceCount : 5;
     const offsetCount = data.offsetCount !== undefined ? data.offsetCount : 0;
 
@@ -186,7 +197,7 @@ async function loadVideos() {
     const tagFilterEl = document.getElementById('customTagFilter');
     if (tagFilterEl) {
       const currentSelected = tagFilterEl.value;
-      tagFilterEl.innerHTML = '<option value="all">Todas las etiquetas</option>';
+      tagFilterEl.innerHTML = '<option value="all">Todas las etiquetas</option><option value="none">Sin etiqueta</option>';
       customTags.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t;
@@ -237,7 +248,7 @@ async function loadVideos() {
           const thumbnail = mediaGroup?.getElementsByTagName('media:thumbnail')[0]?.getAttribute('url') || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
           if (videoId) {
-            if (library.some(libVid => libVid.id === videoId)) {
+            if (library.some(libVid => libVid.id === videoId) || discarded.includes(videoId)) {
               return;
             }
             const textToAnalyze = (title + " " + desc).toLowerCase();
@@ -331,6 +342,14 @@ function removeFromLibrary(videoId) {
   library = library.filter(v => v.id !== videoId);
   chrome.storage.local.set({ library }, () => {
     loadVideos();
+  });
+}
+
+function discardVideo(videoId) {
+  discarded.push(videoId);
+  chrome.storage.local.set({ discarded }, () => {
+    allVideos = allVideos.filter(v => v.id !== videoId);
+    renderVideos();
   });
 }
 
@@ -430,7 +449,8 @@ function renderVideos() {
             ${durationBadge}
           </div>
         </div>
-        <div class="video-actions">
+        <div class="video-actions" style="flex-direction: row;">
+          <button class="btn-discard" data-id="${v.id}">Ocultar</button>
           <button class="btn-save" data-id="${v.id}">Guardar</button>
         </div>
       `;
@@ -442,7 +462,16 @@ function renderVideos() {
       const matchType = typeFilter === 'all' || v.category === typeFilter;
       const matchLevel = levelFilter === 'all' || v.level === levelFilter;
       const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
-      const matchCustomTag = customTagFilter === 'all' || v.customTag === customTagFilter;
+      
+      let matchCustomTag = false;
+      if (customTagFilter === 'all') {
+        matchCustomTag = true;
+      } else if (customTagFilter === 'none') {
+        matchCustomTag = !v.customTag || v.customTag === '';
+      } else {
+        matchCustomTag = v.customTag === customTagFilter;
+      }
+      
       return matchType && matchLevel && matchChannel && matchCustomTag;
     });
 
