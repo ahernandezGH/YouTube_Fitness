@@ -17,9 +17,9 @@
         <h1>YouTube Fitness Tracker</h1>
       </div>
       <div class="header-actions">
-        <div id="authContainer" style="display: flex; align-items: center; gap: 10px; margin-right: 15px;">
-          <span id="userNameDisplay" style="font-size: 13px; color: #8b949e; display: none;"></span>
-          <button id="authBtn" style="background-color: #4285f4; font-size: 12px; padding: 6px 12px;">Iniciar Sesión</button>
+        <div id="authContainer">
+          <span id="userNameDisplay" style="font-size: 13px; color: #8b949e; display: none; margin-right: 8px;"></span>
+          <button id="authBtn" class="auth-btn auth-btn-login">Iniciar Sesión</button>
         </div>
         <button id="refreshBtn"><span class="icon">🔄</span> Actualizar Feed</button>
       </div>
@@ -47,9 +47,10 @@
         </div>
 
         <!-- CORS Warning Banner -->
-        <div id="corsWarning" style="display: none; background-color: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 12px; margin-bottom: 20px; border-radius: 8px; font-size: 13px; color: #f59e0b; line-height: 1.5;">
-          ⚠️ <strong>Filtro de duración limitado:</strong> YouTube bloquea las solicitudes de duración desde webs estáticas (CORS). Si el filtro no se aplica, puedes activar una extensión de CORS en tu navegador (como <em>Allow CORS</em>) para habilitarlo.
-        </div>
+        <details id="corsWarning" style="display: none; background-color: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 14px; margin-bottom: 20px; border-radius: 8px; font-size: 13px; color: #fcd34d; line-height: 1.5;">
+          <summary style="font-weight: 600; outline: none; cursor: pointer;">⚠️ Aviso sobre el filtro de duración (CORS)</summary>
+          <div style="margin-top: 8px; opacity: 0.9;">YouTube bloquea las solicitudes de duración desde webs estáticas. Si notas que videos cortos siguen apareciendo, puedes instalar una extensión de CORS en tu navegador (como <em>Allow CORS</em>) o utilizar el filtro desactivando la protección en tu navegador.</div>
+        </details>
 
         <!-- Filters Bar -->
         <div class="filters-bar">

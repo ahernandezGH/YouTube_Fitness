@@ -122,7 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         userNameDisplay.textContent = `Hola, ${user.displayName.split(' ')[0]}`;
         userNameDisplay.style.display = 'inline-block';
         authBtn.textContent = 'Cerrar Sesión';
-        authBtn.style.backgroundColor = '#d32f2f'; // Rojo para salir
+        authBtn.classList.remove('auth-btn-login');
+        authBtn.classList.add('auth-btn-logout');
         
         // Recargar el estado (ahora vendrá de Firestore)
         initLoad();
@@ -130,7 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Usuario desconectado
         userNameDisplay.style.display = 'none';
         authBtn.textContent = 'Iniciar Sesión';
-        authBtn.style.backgroundColor = '#4285f4'; // Azul para entrar
+        authBtn.classList.remove('auth-btn-logout');
+        authBtn.classList.add('auth-btn-login');
         
         // Recargar el estado (ahora vendrá de LocalStorage)
         initLoad();
