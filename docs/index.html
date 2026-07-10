@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Fitness Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="main-header">
+      <div class="logo-area">
+        <h1>YouTube Fitness Tracker</h1>
+      </div>
+      <div class="header-actions">
+        <button id="refreshBtn"><span class="icon">🔄</span> Actualizar Feed</button>
+      </div>
+    </header>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+      <button id="feedTabBtn" class="tab-btn active">Feed</button>
+      <button id="libraryTabBtn" class="tab-btn">Mi Biblioteca</button>
+      <button id="configTabBtn" class="tab-btn">Configuración</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Video Tab Content (Feed & Library) -->
+      <section id="videosSection" class="tab-pane active">
+        <!-- URL Input (Replacing Active Tab Detection in extension) -->
+        <div class="add-url-card">
+          <h3>Añadir Video Manualmente</h3>
+          <div class="input-group">
+            <input type="text" id="videoUrlInput" placeholder="Pega la URL de un video de YouTube (ej. https://www.youtube.com/watch?v=...)">
+            <button id="addVideoUrlBtn">Añadir a Biblioteca</button>
+          </div>
+        </div>
+
+        <!-- Filters Bar -->
+        <div class="filters-bar">
+          <div class="filter-group">
+            <label for="typeFilter">Categoría</label>
+            <select id="typeFilter">
+              <option value="all">Todos los tipos</option>
+              <option value="upper">Tren Superior</option>
+              <option value="lower">Tren Inferior</option>
+              <option value="full">Cuerpo Completo</option>
+              <option value="core">Core</option>
+              <option value="cardio">Cardio</option>
+              <option value="unknown">Otros / Sin clasificar</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label for="levelFilter">Nivel</label>
+            <select id="levelFilter">
+              <option value="all">Todos los niveles</option>
+              <option value="basic">Básico</option>
+              <option value="intermediate">Intermedio</option>
+              <option value="advanced">Avanzado</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label for="channelFilter">Canal</label>
+            <select id="channelFilter">
+              <option value="all">Todos los canales</option>
+            </select>
+          </div>
+
+          <div class="filter-group" id="customTagFilterContainer" style="display: none;">
+            <label for="customTagFilter">Etiqueta Personalizada</label>
+            <select id="customTagFilter">
+              <option value="all">Todas las etiquetas</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="videoList" class="video-list">
+          <div class="loading-placeholder">Cargando videos...</div>
+        </div>
+      </section>
+
+      <!-- Settings Tab Content (Adapted from options.html) -->
+      <section id="configSection" class="tab-pane">
+        <div class="config-grid">
+          
+          <!-- Add Channel Card -->
+          <div class="card">
+            <h3>Agregar Canal de YouTube</h3>
+            <p class="card-subtitle">Puedes encontrar el ID del canal en la URL del canal de YouTube (ej. UCxxxx...)</p>
+            <div class="form-group">
+              <input type="text" id="channelId" placeholder="ID del Canal (ej. UCxxyz...)">
+              <input type="text" id="channelName" placeholder="Nombre (ej. Athlean-X)">
+              <input type="number" id="channelPriority" placeholder="Prioridad (0 es la máxima)" min="0" value="0">
+              <button id="addChannelBtn">Agregar Canal</button>
+            </div>
+          </div>
+
+          <!-- Feed Settings Card -->
+          <div class="card">
+            <h3>Configuración del Feed</h3>
+            <div class="form-group-row">
+              <label for="minDuration">Ocultar videos de menos de (minutos):</label>
+              <input type="number" id="minDuration" value="10" min="0">
+            </div>
+            <div class="form-group-row">
+              <label for="sliceCount">Cantidad de videos por canal:</label>
+              <input type="number" id="sliceCount" value="5" min="1" max="15">
+            </div>
+            <div class="form-group-row">
+              <label for="offsetCount">Videos a omitir al inicio (Offset):</label>
+              <input type="number" id="offsetCount" value="0" min="0" max="14">
+            </div>
+          </div>
+
+          <!-- Subscribed Channels List Card -->
+          <div class="card">
+            <h3>Tus Canales Suscritos</h3>
+            <ul id="channelList" class="channel-list"></ul>
+            <button id="saveBtn" class="btn-primary-wide">Guardar Configuración</button>
+          </div>
+
+          <!-- Custom Tags Card -->
+          <div class="card">
+            <h3>Etiquetas Personalizadas (Biblioteca)</h3>
+            <p class="card-subtitle">Agrega etiquetas para clasificar adicionalmente los videos en tu biblioteca. Ej: "Fuerza", "Estiramiento".</p>
+            <div class="input-group">
+              <input type="text" id="newTagInput" placeholder="Nueva etiqueta">
+              <button id="addTagBtn">Agregar</button>
+            </div>
+            <div id="customTagsContainer" class="tags-container"></div>
+          </div>
+
+          <!-- Backup Card -->
+          <div class="card">
+            <h3>Copia de Seguridad (Backup)</h3>
+            <p class="card-subtitle">Exporta o importa la configuración, canales, biblioteca y etiquetas personalizadas.</p>
+            <div class="button-group">
+              <button id="exportBtn" class="btn-secondary">Exportar JSON</button>
+              <button id="importBtn" class="btn-secondary">Importar JSON</button>
+              <input type="file" id="importFile" accept=".json" style="display: none;">
+            </div>
+          </div>
+
+        </div>
+      </section>
+      
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
