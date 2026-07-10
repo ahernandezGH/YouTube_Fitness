@@ -9,7 +9,7 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
 // Para obtenerlo: Consola Firebase -> Configuración del proyecto -> Mis aplicaciones (Añadir Web App </>)
 const firebaseConfig = {
   apiKey: "AIzaSyCSCEtAx_wU9Iz46B1vuQzZdOVELWlIfJQ",
-  authDomain: "fitness-9f344.firebaseapp.com",
+  authDomain: "ahernandezgh.github.io",
   projectId: "fitness-9f344",
   storageBucket: "fitness-9f344.firebasestorage.app",
   messagingSenderId: "982199662373",
