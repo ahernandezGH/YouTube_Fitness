@@ -351,10 +351,39 @@ function updateCustomTagFilters() {
   }
 }
 
+let durationFetchFailed = false;
+
+async function fetchWithTimeout(url, options = {}, timeout = 2500) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (e) {
+    clearTimeout(id);
+    throw e;
+  }
+}
+
 async function getVideoDuration(videoId) {
   try {
-    const response = await fetchProxy(`https://www.youtube.com/watch?v=${videoId}`);
-    if (!response.ok) return null;
+    let response;
+    // 1. Intentamos fetch directo (rápido y funciona con extensiones CORS o localhost)
+    try {
+      response = await fetchWithTimeout(`https://www.youtube.com/watch?v=${videoId}`, {}, 2000);
+    } catch (e) {
+      // 2. Si falla (CORS o timeout), intentamos vía proxy
+      response = await fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`, {}, 2500);
+    }
+
+    if (!response.ok) {
+      durationFetchFailed = true;
+      return null;
+    }
     const html = await response.text();
     const match = html.match(/"lengthSeconds"\s*:\s*"(\d+)"/);
     if (match) {
@@ -362,6 +391,7 @@ async function getVideoDuration(videoId) {
     }
   } catch (e) {
     console.error('Error fetching duration for video:', videoId, e);
+    durationFetchFailed = true;
   }
   return null;
 }
@@ -378,6 +408,7 @@ function formatDuration(seconds) {
 }
 
 async function loadVideos() {
+  durationFetchFailed = false; // Reset flag on reload
   const videoListEl = document.getElementById('videoList');
   videoListEl.innerHTML = '<div class="loading-placeholder">Cargando videos de YouTube...</div>';
 
@@ -464,6 +495,11 @@ async function loadVideos() {
     });
 
     await Promise.all(fetchPromises);
+
+    const corsWarningEl = document.getElementById('corsWarning');
+    if (corsWarningEl) {
+      corsWarningEl.style.display = durationFetchFailed ? 'block' : 'none';
+    }
 
     allVideos.sort((a, b) => {
       if (a.priority !== b.priority) {
