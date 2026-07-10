@@ -13,9 +13,14 @@
   <div class="container">
     <header class="main-header">
       <div class="logo-area">
+        <img src="icon16.png" alt="Logo" class="logo-img" onerror="this.style.display='none'">
         <h1>YouTube Fitness Tracker</h1>
       </div>
       <div class="header-actions">
+        <div id="authContainer" style="display: flex; align-items: center; gap: 10px; margin-right: 15px;">
+          <span id="userNameDisplay" style="font-size: 13px; color: #8b949e; display: none;"></span>
+          <button id="authBtn" style="background-color: #4285f4; font-size: 12px; padding: 6px 12px;">Iniciar Sesión</button>
+        </div>
         <button id="refreshBtn"><span class="icon">🔄</span> Actualizar Feed</button>
       </div>
     </header>
@@ -158,6 +163,6 @@
       
     </main>
   </div>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

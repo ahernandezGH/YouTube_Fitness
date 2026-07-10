@@ -1,3 +1,5 @@
+import { auth, db, provider, signInWithPopup, signOut, onAuthStateChanged, doc, getDoc, setDoc } from './firebase-config.js';
+
 // Categorías y niveles para clasificar videos
 const CATEGORIES = {
   cardio: ['cardio', 'hiit', 'tabata', 'quemar', 'sudor', 'emom', 'amrap', 'aerobico', 'running', 'correr', 'lazo', 'cuerda', 'jumping', 'resistencia', 'metcon'],
@@ -22,9 +24,32 @@ const CATEGORY_NAMES = {
   unknown: 'Otros'
 };
 
-// LocalStorage Helper to mimic chrome.storage.local
+// Usuario actual de Firebase
+let currentUser = null;
+
+// Storage Helper dinámico (Firestore o LocalStorage)
 const storage = {
-  get: (keys, callback) => {
+  get: async (keys, callback) => {
+    if (currentUser) {
+      // Leer de Firestore
+      try {
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const remoteData = docSnap.data();
+          const result = {};
+          keys.forEach(key => {
+            result[key] = remoteData[key] !== undefined ? remoteData[key] : undefined;
+          });
+          callback(result);
+          return;
+        }
+      } catch (err) {
+        console.error("Error reading from Firestore:", err);
+      }
+    }
+    
+    // Fallback LocalStorage
     const result = {};
     keys.forEach(key => {
       const val = localStorage.getItem('yt_fitness_' + key);
@@ -36,13 +61,37 @@ const storage = {
     });
     callback(result);
   },
-  set: (data, callback) => {
-    Object.entries(data).forEach(([key, value]) => {
-      localStorage.setItem('yt_fitness_' + key, JSON.stringify(value));
-    });
+  set: async (data, callback) => {
+    if (currentUser) {
+      // Guardar en Firestore
+      try {
+        const docRef = doc(db, "users", currentUser.uid);
+        // Usar merge:true para no sobreescribir campos faltantes
+        await setDoc(docRef, data, { merge: true });
+      } catch (err) {
+        console.error("Error writing to Firestore:", err);
+      }
+    } else {
+      // Guardar en LocalStorage
+      Object.entries(data).forEach(([key, value]) => {
+        localStorage.setItem('yt_fitness_' + key, JSON.stringify(value));
+      });
+    }
     if (callback) callback();
   },
-  getAll: (callback) => {
+  getAll: async (callback) => {
+    if (currentUser) {
+      try {
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          callback(docSnap.data());
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching all from Firestore:", err);
+      }
+    }
     const result = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -58,6 +107,52 @@ const storage = {
     callback(result);
   }
 };
+
+// Autenticación de Firebase y UI
+document.addEventListener('DOMContentLoaded', () => {
+  const authBtn = document.getElementById('authBtn');
+  const userNameDisplay = document.getElementById('userNameDisplay');
+
+  // Si auth existe (no falló la inicialización)
+  if (auth) {
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (user) {
+        // Usuario logueado
+        userNameDisplay.textContent = `Hola, ${user.displayName.split(' ')[0]}`;
+        userNameDisplay.style.display = 'inline-block';
+        authBtn.textContent = 'Cerrar Sesión';
+        authBtn.style.backgroundColor = '#d32f2f'; // Rojo para salir
+        
+        // Recargar el estado (ahora vendrá de Firestore)
+        initLoad();
+      } else {
+        // Usuario desconectado
+        userNameDisplay.style.display = 'none';
+        authBtn.textContent = 'Iniciar Sesión';
+        authBtn.style.backgroundColor = '#4285f4'; // Azul para entrar
+        
+        // Recargar el estado (ahora vendrá de LocalStorage)
+        initLoad();
+      }
+    });
+
+    authBtn.addEventListener('click', async () => {
+      try {
+        if (currentUser) {
+          await signOut(auth);
+        } else {
+          await signInWithPopup(auth, provider);
+        }
+      } catch (error) {
+        console.error("Error de Autenticación:", error);
+        alert("Error de autenticación: " + error.message);
+      }
+    });
+  } else {
+    authBtn.style.display = 'none';
+  }
+});
 
 let allVideos = [];
 let library = [];
