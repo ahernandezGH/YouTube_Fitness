@@ -530,6 +530,12 @@ async function loadVideos() {
         opt.textContent = ch.name;
         channelFilterEl.appendChild(opt);
       });
+      // Agregar opción Manual
+      const manualOpt = document.createElement('option');
+      manualOpt.value = 'Manual';
+      manualOpt.textContent = 'Manual';
+      channelFilterEl.appendChild(manualOpt);
+
       if (Array.from(channelFilterEl.options).some(o => o.value === currentSelected)) {
         channelFilterEl.value = currentSelected;
       }

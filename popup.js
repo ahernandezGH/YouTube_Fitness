@@ -25,6 +25,7 @@ let allVideos = [];
 let library = [];
 let customTags = [];
 let discarded = [];
+let userChannels = [];
 let currentActiveTabUrl = null;
 let activeTab = 'feed';
 
@@ -174,6 +175,7 @@ async function loadVideos() {
     library = data.library || [];
     customTags = data.customTags || [];
     discarded = data.discarded || [];
+    userChannels = data.channels || [];
     const sliceCount = data.sliceCount !== undefined ? data.sliceCount : 5;
     const offsetCount = data.offsetCount !== undefined ? data.offsetCount : 0;
 
