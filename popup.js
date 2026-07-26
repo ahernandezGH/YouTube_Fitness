@@ -530,13 +530,21 @@ function renderVideos() {
         return `<option value="${t}" ${v.customTag === t ? 'selected' : ''}>${t}</option>`;
       }).join('');
 
+      const channelOptions = userChannels.map(ch => {
+        return `<option value="${ch.name}" ${v.channelName === ch.name ? 'selected' : ''}>${ch.name}</option>`;
+      }).join('');
+      const manualOption = `<option value="Manual" ${v.channelName === 'Manual' ? 'selected' : ''}>Manual</option>`;
+
       card.innerHTML = `
         <img src="${v.thumbnail}" class="thumbnail" alt="thumbnail">
         <div class="video-info">
           <div class="video-title">${v.title}</div>
           <div class="badges">
             <span class="badge priority">Prio: ${v.priority}</span>
-            <span class="badge">${v.channelName}</span>
+            <select class="library-channel-select badge" data-id="${v.id}" style="background:var(--card-bg); border:1px solid #444; color:var(--text-color); cursor:pointer;">
+              ${channelOptions}
+              ${manualOption}
+            </select>
             <select class="library-level-select badge" data-id="${v.id}" style="background:var(--card-bg); border:1px solid #444; color:var(--text-color); cursor:pointer;">
               ${levelOptions}
             </select>
