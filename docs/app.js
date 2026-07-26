@@ -906,55 +906,27 @@ async function addVideoFromUrl(url, addBtn) {
   }
 
   addBtn.disabled = true;
-  addBtn.textContent = 'Cargando...';
+  const newVideo = {
+    id: videoId,
+    title: `Video Guardado (${videoId})`,
+    thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    channelName: 'Manual',
+    priority: 99,
+    date: new Date().toISOString(),
+    level: 'basic',
+    durationSeconds: null,
+    types: ['unknown'],
+    category: 'unknown',
+    favorite: false,
+    customTag: ''
+  };
 
-  try {
-    const response = await fetchProxy(`https://www.youtube.com/watch?v=${videoId}`);
-    if (!response.ok) throw new Error('No se pudo acceder al video.');
-    const html = await response.text();
-
-    const titleMatch = html.match(/<title>(.*?)<\/title>/);
-    let title = titleMatch ? titleMatch[1] : 'Sin título';
-    title = title.replace(/\s*-\s*YouTube$/, '');
-
-    const authorMatch = html.match(/"author"\s*:\s*"([^"]+)"/);
-    const channelName = authorMatch ? authorMatch[1] : 'Canal manual';
-
-    const descMatch = html.match(/"shortDescription"\s*:\s*"([^"]+)"/);
-    const desc = descMatch ? descMatch[1] : '';
-
-    const durationMatch = html.match(/"lengthSeconds"\s*:\s*"(\d+)"/);
-    const durationSeconds = durationMatch ? parseInt(durationMatch[1], 10) : null;
-
-    const textToAnalyze = (title + " " + desc).toLowerCase();
-    const types = classifyTextMultiple(textToAnalyze, CATEGORIES);
-    const defaultCategory = types && types.length > 0 ? types[0] : 'unknown';
-    const level = classifyText(textToAnalyze, LEVELS) || 'basic';
-
-    const newVideo = {
-      id: videoId,
-      title: title,
-      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      channelName: channelName,
-      priority: 99,
-      date: new Date().toISOString(),
-      level: level,
-      durationSeconds: durationSeconds,
-      types: types,
-      category: defaultCategory,
-      favorite: false,
-      customTag: ''
-    };
-
-    library.push(newVideo);
-    storage.set({ library }, () => {
-      renderVideos();
-    });
-  } catch (error) {
-    console.error('Error al agregar el video por URL:', error);
-    alert('Error al recuperar información del video. Por favor, inténtalo de nuevo.');
-  } finally {
+  library.push(newVideo);
+  storage.set({ library }, () => {
+    const alertEl = document.getElementById('activeTabAlert');
+    if (alertEl) alertEl.style.display = 'none';
+    renderVideos();
     addBtn.disabled = false;
-    addBtn.textContent = 'Añadir';
-  }
+    addBtn.textContent = 'Añadir a Biblioteca';
+  });
 }
