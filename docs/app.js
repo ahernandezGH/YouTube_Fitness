@@ -365,6 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
       updateLibraryVideoLevel(id, target.value);
     } else if (target.classList.contains('library-tag-select')) {
       updateLibraryVideoTag(id, target.value);
+    } else if (target.classList.contains('library-channel-select')) {
+      updateLibraryVideoChannel(id, target.value);
     }
   });
 

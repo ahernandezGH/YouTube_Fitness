@@ -126,6 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (target.classList.contains('library-tag-select')) {
       const id = target.getAttribute('data-id');
       updateLibraryVideoTag(id, target.value);
+    } else if (target.classList.contains('library-channel-select')) {
+      const id = target.getAttribute('data-id');
+      updateLibraryVideoChannel(id, target.value);
     }
   });
 
