@@ -700,6 +700,16 @@ function updateLibraryVideoLevel(videoId, newLevel) {
   }
 }
 
+function updateLibraryVideoChannel(videoId, newChannelName) {
+  const video = library.find(v => v.id === videoId);
+  if (video) {
+    video.channelName = newChannelName;
+    storage.set({ library }, () => {
+      renderVideos();
+    });
+  }
+}
+
 function updateLibraryVideoTag(videoId, newTag) {
   const video = library.find(v => v.id === videoId);
   if (video) {

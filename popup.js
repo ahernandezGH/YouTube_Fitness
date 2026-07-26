@@ -389,6 +389,16 @@ function updateLibraryVideoLevel(videoId, newLevel) {
   }
 }
 
+function updateLibraryVideoChannel(videoId, newChannelName) {
+  const video = library.find(v => v.id === videoId);
+  if (video) {
+    video.channelName = newChannelName;
+    chrome.storage.local.set({ library }, () => {
+      renderVideos();
+    });
+  }
+}
+
 function updateLibraryVideoTag(videoId, newTag) {
   const video = library.find(v => v.id === videoId);
   if (video) {
