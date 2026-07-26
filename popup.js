@@ -184,6 +184,12 @@ async function loadVideos() {
         opt.textContent = ch.name;
         channelFilterEl.appendChild(opt);
       });
+      // Agregar opción Manual para los videos agregados por URL
+      const manualOpt = document.createElement('option');
+      manualOpt.value = 'Manual';
+      manualOpt.textContent = 'Manual';
+      channelFilterEl.appendChild(manualOpt);
+      
       if (Array.from(channelFilterEl.options).some(o => o.value === currentSelected)) {
         channelFilterEl.value = currentSelected;
       }
@@ -568,54 +574,27 @@ async function addVideoFromUrl(url, addBtn) {
   addBtn.disabled = true;
   addBtn.textContent = 'Cargando...';
 
-  try {
-    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
-    if (!response.ok) throw new Error('No se pudo acceder al video.');
-    const html = await response.text();
+  // Omitimos la carga de la URL para que sea instantáneo y no falle.
+  const newVideo = {
+    id: videoId,
+    title: `Video Guardado (${videoId})`,
+    thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    channelName: 'Manual',
+    priority: 99,
+    date: new Date().toISOString(),
+    level: 'basic',
+    durationSeconds: null,
+    types: ['unknown'],
+    category: 'unknown',
+    favorite: false,
+    customTag: ''
+  };
 
-    const titleMatch = html.match(/<title>(.*?)<\/title>/);
-    let title = titleMatch ? titleMatch[1] : 'Sin título';
-    title = title.replace(/\s*-\s*YouTube$/, '');
-
-    const authorMatch = html.match(/"author"\s*:\s*"([^"]+)"/);
-    const channelName = authorMatch ? authorMatch[1] : 'Canal manual';
-
-    const descMatch = html.match(/"shortDescription"\s*:\s*"([^"]+)"/);
-    const desc = descMatch ? descMatch[1] : '';
-
-    const durationMatch = html.match(/"lengthSeconds"\s*:\s*"(\d+)"/);
-    const durationSeconds = durationMatch ? parseInt(durationMatch[1], 10) : null;
-
-    const textToAnalyze = (title + " " + desc).toLowerCase();
-    const types = classifyTextMultiple(textToAnalyze, CATEGORIES);
-    const defaultCategory = types && types.length > 0 ? types[0] : 'unknown';
-    const level = classifyText(textToAnalyze, LEVELS) || 'basic';
-
-    const newVideo = {
-      id: videoId,
-      title: title,
-      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      channelName: channelName,
-      priority: 99,
-      date: new Date().toISOString(),
-      level: level,
-      durationSeconds: durationSeconds,
-      types: types,
-      category: defaultCategory,
-      favorite: false,
-      customTag: ''
-    };
-
-    library.push(newVideo);
-    chrome.storage.local.set({ library }, () => {
-      document.getElementById('activeTabAlert').style.display = 'none';
-      renderVideos();
-    });
-  } catch (error) {
-    console.error('Error al agregar el video por URL:', error);
-    alert('Error al recuperar información del video. Por favor, inténtalo de nuevo.');
-  } finally {
+  library.push(newVideo);
+  chrome.storage.local.set({ library }, () => {
+    document.getElementById('activeTabAlert').style.display = 'none';
+    renderVideos();
     addBtn.disabled = false;
     addBtn.textContent = 'Añadir';
-  }
+  });
 }
