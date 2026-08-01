@@ -513,6 +513,23 @@ async function loadVideos() {
 
   storage.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'discarded', 'library'], async (data) => {
     library = data.library || [];
+    // Limpieza automática de duplicados por ID
+    const uniqueIds = new Set();
+    const cleanLibrary = [];
+    let hadDuplicates = false;
+    library.forEach(item => {
+      if (item.id && !uniqueIds.has(item.id)) {
+        uniqueIds.add(item.id);
+        cleanLibrary.push(item);
+      } else {
+        hadDuplicates = true;
+      }
+    });
+    if (hadDuplicates) {
+      library = cleanLibrary;
+      storage.set({ library });
+      console.log('Limpieza automática: Se han eliminado videos duplicados de la biblioteca.');
+    }
     discarded = data.discarded || [];
     const minDuration = data.minDuration !== undefined ? data.minDuration : 10;
     const sliceCount = data.sliceCount !== undefined ? data.sliceCount : 5;
@@ -637,6 +654,11 @@ function classifyTextMultiple(text, dictionary) {
 }
 
 function saveToLibrary(videoId) {
+  if (library.some(v => v.id === videoId)) {
+    allVideos = allVideos.filter(v => v.id !== videoId);
+    renderVideos();
+    return;
+  }
   const video = allVideos.find(v => v.id === videoId);
   if (!video) return;
   const defaultCategory = video.types && video.types.length > 0 ? video.types[0] : 'unknown';
