@@ -54,6 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('channelFilter').addEventListener('change', renderVideos);
   document.getElementById('customTagFilter').addEventListener('change', renderVideos);
 
+  const excludeTagFilterEl = document.getElementById('excludeTagFilter');
+  if (excludeTagFilterEl) {
+    excludeTagFilterEl.addEventListener('change', renderVideos);
+  }
+
   const saveActiveTabBtn = document.getElementById('saveActiveTabBtn');
   if (saveActiveTabBtn) {
     saveActiveTabBtn.addEventListener('click', () => {
@@ -248,6 +253,21 @@ async function loadVideos() {
       });
       if (Array.from(tagFilterEl.options).some(o => o.value === currentSelected)) {
         tagFilterEl.value = currentSelected;
+      }
+    }
+
+    const excludeFilterEl = document.getElementById('excludeTagFilter');
+    if (excludeFilterEl) {
+      const currentExclude = excludeFilterEl.value;
+      excludeFilterEl.innerHTML = '<option value="none">Excluir: Ninguna</option>';
+      customTags.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        excludeFilterEl.appendChild(opt);
+      });
+      if (Array.from(excludeFilterEl.options).some(o => o.value === currentExclude)) {
+        excludeFilterEl.value = currentExclude;
       }
     }
 
@@ -469,6 +489,8 @@ function renderVideos() {
   const channelFilter = document.getElementById('channelFilter').value;
   const customTagFilterEl = document.getElementById('customTagFilter');
   const customTagFilter = customTagFilterEl ? customTagFilterEl.value : 'all';
+  const excludeTagFilterEl = document.getElementById('excludeTagFilter');
+  const excludeTagFilter = excludeTagFilterEl ? excludeTagFilterEl.value : 'none';
   const videoListEl = document.getElementById('videoList');
   
   const addVideoForm = document.getElementById('addVideoForm');
@@ -476,8 +498,12 @@ function renderVideos() {
     addVideoForm.style.display = activeTab === 'library' ? 'flex' : 'none';
   }
 
+  const showTagFilters = (activeTab === 'library' && customTags.length > 0);
   if (customTagFilterEl) {
-    customTagFilterEl.style.display = (activeTab === 'library' && customTags.length > 0) ? 'inline-block' : 'none';
+    customTagFilterEl.style.display = showTagFilters ? 'inline-block' : 'none';
+  }
+  if (excludeTagFilterEl) {
+    excludeTagFilterEl.style.display = showTagFilters ? 'inline-block' : 'none';
   }
   
   videoListEl.innerHTML = '';
@@ -533,17 +559,23 @@ function renderVideos() {
       const matchLevel = levelFilter === 'all' || v.level === levelFilter;
       const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
       
-      let matchCustomTag = false;
       const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
+      
+      let matchIncludeTag = false;
       if (customTagFilter === 'all') {
-        matchCustomTag = true;
+        matchIncludeTag = true;
       } else if (customTagFilter === 'none') {
-        matchCustomTag = videoTags.length === 0;
+        matchIncludeTag = videoTags.length === 0;
       } else {
-        matchCustomTag = videoTags.includes(customTagFilter);
+        matchIncludeTag = videoTags.includes(customTagFilter);
+      }
+
+      let matchExcludeTag = true;
+      if (excludeTagFilter !== 'none') {
+        matchExcludeTag = !videoTags.includes(excludeTagFilter);
       }
       
-      return matchType && matchLevel && matchChannel && matchCustomTag;
+      return matchType && matchLevel && matchChannel && matchIncludeTag && matchExcludeTag;
     });
 
     const sortedLibrary = [...filteredVideos].sort((a, b) => {

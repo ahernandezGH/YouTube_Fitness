@@ -217,6 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
     customTagFilterEl.addEventListener('change', renderVideos);
   }
 
+  const excludeTagFilterEl = document.getElementById('excludeTagFilter');
+  if (excludeTagFilterEl) {
+    excludeTagFilterEl.addEventListener('change', renderVideos);
+  }
+
   // Manual Add Video
   document.getElementById('addVideoUrlBtn').addEventListener('click', addVideoByUrl);
 
@@ -495,17 +500,34 @@ function moveCustomTag(index, direction) {
 
 function updateCustomTagFilters() {
   const tagFilterEl = document.getElementById('customTagFilter');
-  if (!tagFilterEl) return;
-  const currentSelected = tagFilterEl.value;
-  tagFilterEl.innerHTML = '<option value="all">Todas las etiquetas</option><option value="none">Sin etiqueta</option>';
-  customTags.forEach(t => {
-    const opt = document.createElement('option');
-    opt.value = t;
-    opt.textContent = t;
-    tagFilterEl.appendChild(opt);
-  });
-  if (Array.from(tagFilterEl.options).some(o => o.value === currentSelected)) {
-    tagFilterEl.value = currentSelected;
+  const excludeFilterEl = document.getElementById('excludeTagFilter');
+  
+  if (tagFilterEl) {
+    const currentSelected = tagFilterEl.value;
+    tagFilterEl.innerHTML = '<option value="all">Todas las etiquetas</option><option value="none">Sin etiqueta</option>';
+    customTags.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      tagFilterEl.appendChild(opt);
+    });
+    if (Array.from(tagFilterEl.options).some(o => o.value === currentSelected)) {
+      tagFilterEl.value = currentSelected;
+    }
+  }
+
+  if (excludeFilterEl) {
+    const currentExclude = excludeFilterEl.value;
+    excludeFilterEl.innerHTML = '<option value="none">Ninguna (no excluir)</option>';
+    customTags.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      excludeFilterEl.appendChild(opt);
+    });
+    if (Array.from(excludeFilterEl.options).some(o => o.value === currentExclude)) {
+      excludeFilterEl.value = currentExclude;
+    }
   }
 }
 
@@ -848,10 +870,19 @@ function renderVideos() {
   const customTagFilterEl = document.getElementById('customTagFilter');
   const customTagFilter = customTagFilterEl ? customTagFilterEl.value : 'all';
   const customTagFilterContainer = document.getElementById('customTagFilterContainer');
+  
+  const excludeTagFilterEl = document.getElementById('excludeTagFilter');
+  const excludeTagFilter = excludeTagFilterEl ? excludeTagFilterEl.value : 'none';
+  const excludeTagFilterContainer = document.getElementById('excludeTagFilterContainer');
+
   const videoListEl = document.getElementById('videoList');
   
+  const showTagFilters = (activeTab === 'library' && customTags.length > 0);
   if (customTagFilterContainer) {
-    customTagFilterContainer.style.display = (activeTab === 'library' && customTags.length > 0) ? 'flex' : 'none';
+    customTagFilterContainer.style.display = showTagFilters ? 'flex' : 'none';
+  }
+  if (excludeTagFilterContainer) {
+    excludeTagFilterContainer.style.display = showTagFilters ? 'flex' : 'none';
   }
   
   videoListEl.innerHTML = '';
@@ -907,17 +938,23 @@ function renderVideos() {
       const matchLevel = levelFilter === 'all' || v.level === levelFilter;
       const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
       
-      let matchCustomTag = false;
       const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
+      
+      let matchIncludeTag = false;
       if (customTagFilter === 'all') {
-        matchCustomTag = true;
+        matchIncludeTag = true;
       } else if (customTagFilter === 'none') {
-        matchCustomTag = videoTags.length === 0;
+        matchIncludeTag = videoTags.length === 0;
       } else {
-        matchCustomTag = videoTags.includes(customTagFilter);
+        matchIncludeTag = videoTags.includes(customTagFilter);
+      }
+
+      let matchExcludeTag = true;
+      if (excludeTagFilter !== 'none') {
+        matchExcludeTag = !videoTags.includes(excludeTagFilter);
       }
       
-      return matchType && matchLevel && matchChannel && matchCustomTag;
+      return matchType && matchLevel && matchChannel && matchIncludeTag && matchExcludeTag;
     });
 
     const sortedLibrary = [...filteredVideos].sort((a, b) => {
