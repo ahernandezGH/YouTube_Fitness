@@ -312,6 +312,16 @@ document.addEventListener('DOMContentLoaded', () => {
   videoListEl.addEventListener('click', (e) => {
     const target = e.target;
     
+    // Video Tag Remove Button
+    if (target.classList.contains('video-tag-remove')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = target.getAttribute('data-id');
+      const tag = target.getAttribute('data-tag');
+      removeTagFromLibraryVideo(id, tag);
+      return;
+    }
+
     // Save Button
     if (target.classList.contains('btn-save')) {
       e.preventDefault();
@@ -363,8 +373,11 @@ document.addEventListener('DOMContentLoaded', () => {
       updateLibraryVideoCategory(id, target.value);
     } else if (target.classList.contains('library-level-select')) {
       updateLibraryVideoLevel(id, target.value);
-    } else if (target.classList.contains('library-tag-select')) {
-      updateLibraryVideoTag(id, target.value);
+    } else if (target.classList.contains('library-add-tag-select')) {
+      const tag = target.value;
+      if (tag) {
+        addTagToLibraryVideo(id, tag);
+      }
     } else if (target.classList.contains('library-channel-select')) {
       updateLibraryVideoChannel(id, target.value);
     }
@@ -417,20 +430,66 @@ function renderCustomTags() {
   customTags.forEach((tag, index) => {
     const span = document.createElement('span');
     span.className = 'tag-badge';
-    span.textContent = tag + ' ';
+    
+    const tagText = document.createElement('span');
+    tagText.textContent = tag;
+    span.appendChild(tagText);
+
+    const orderControls = document.createElement('span');
+    orderControls.className = 'tag-order-controls';
+
+    const upBtn = document.createElement('button');
+    upBtn.className = 'tag-move-btn';
+    upBtn.textContent = '◀';
+    upBtn.title = 'Mover a la izquierda';
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moveCustomTag(index, -1);
+    });
+
+    const downBtn = document.createElement('button');
+    downBtn.className = 'tag-move-btn';
+    downBtn.textContent = '▶';
+    downBtn.title = 'Mover a la derecha';
+    downBtn.disabled = index === customTags.length - 1;
+    downBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moveCustomTag(index, 1);
+    });
+
+    orderControls.appendChild(upBtn);
+    orderControls.appendChild(downBtn);
+    span.appendChild(orderControls);
 
     const delBtn = document.createElement('button');
+    delBtn.className = 'tag-delete-btn';
     delBtn.innerHTML = '&times;';
-    delBtn.addEventListener('click', () => {
+    delBtn.title = 'Eliminar etiqueta';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       customTags.splice(index, 1);
       storage.set({ customTags }, () => {
         renderCustomTags();
         updateCustomTagFilters();
+        renderVideos();
       });
     });
 
     span.appendChild(delBtn);
     customTagsContainer.appendChild(span);
+  });
+}
+
+function moveCustomTag(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= customTags.length) return;
+  const [movedTag] = customTags.splice(index, 1);
+  customTags.splice(newIndex, 0, movedTag);
+  storage.set({ customTags }, () => {
+    renderCustomTags();
+    updateCustomTagFilters();
+    renderVideos();
   });
 }
 
@@ -513,22 +572,35 @@ async function loadVideos() {
 
   storage.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'discarded', 'library'], async (data) => {
     library = data.library || [];
-    // Limpieza automática de duplicados por ID
+    // Limpieza automática de duplicados por ID y normalización de etiquetas
     const uniqueIds = new Set();
     const cleanLibrary = [];
     let hadDuplicates = false;
+    let hadNormalization = false;
     library.forEach(item => {
       if (item.id && !uniqueIds.has(item.id)) {
         uniqueIds.add(item.id);
+        // Normalización de etiquetas: customTag -> customTags []
+        if (item.customTags === undefined) {
+          if (item.customTag && typeof item.customTag === 'string') {
+            item.customTags = [item.customTag];
+          } else {
+            item.customTags = [];
+          }
+          hadNormalization = true;
+        } else if (!Array.isArray(item.customTags)) {
+          item.customTags = [];
+          hadNormalization = true;
+        }
         cleanLibrary.push(item);
       } else {
         hadDuplicates = true;
       }
     });
-    if (hadDuplicates) {
+    if (hadDuplicates || hadNormalization) {
       library = cleanLibrary;
       storage.set({ library });
-      console.log('Limpieza automática: Se han eliminado videos duplicados de la biblioteca.');
+      if (hadDuplicates) console.log('Limpieza automática: Se han eliminado videos duplicados de la biblioteca.');
     }
     discarded = data.discarded || [];
     const minDuration = data.minDuration !== undefined ? data.minDuration : 10;
@@ -675,7 +747,7 @@ function saveToLibrary(videoId) {
     types: video.types,
     category: defaultCategory,
     favorite: false,
-    customTag: ''
+    customTags: []
   };
 
   library.push(libVideo);
@@ -740,10 +812,28 @@ function updateLibraryVideoChannel(videoId, newChannelName) {
   }
 }
 
-function updateLibraryVideoTag(videoId, newTag) {
+function addTagToLibraryVideo(videoId, tag) {
+  const video = library.find(v => v.id === videoId);
+  if (video && tag) {
+    if (!Array.isArray(video.customTags)) {
+      video.customTags = video.customTag ? [video.customTag] : [];
+    }
+    if (!video.customTags.includes(tag)) {
+      video.customTags.push(tag);
+      storage.set({ library }, () => {
+        renderVideos();
+      });
+    }
+  }
+}
+
+function removeTagFromLibraryVideo(videoId, tag) {
   const video = library.find(v => v.id === videoId);
   if (video) {
-    video.customTag = newTag;
+    if (!Array.isArray(video.customTags)) {
+      video.customTags = video.customTag ? [video.customTag] : [];
+    }
+    video.customTags = video.customTags.filter(t => t !== tag);
     storage.set({ library }, () => {
       renderVideos();
     });
@@ -818,12 +908,13 @@ function renderVideos() {
       const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
       
       let matchCustomTag = false;
+      const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
       if (customTagFilter === 'all') {
         matchCustomTag = true;
       } else if (customTagFilter === 'none') {
-        matchCustomTag = !v.customTag || v.customTag === '';
+        matchCustomTag = videoTags.length === 0;
       } else {
-        matchCustomTag = v.customTag === customTagFilter;
+        matchCustomTag = videoTags.includes(customTagFilter);
       }
       
       return matchType && matchLevel && matchChannel && matchCustomTag;
@@ -859,14 +950,23 @@ function renderVideos() {
         return `<option value="${key}" ${v.level === key ? 'selected' : ''}>${key.toUpperCase()}</option>`;
       }).join('');
 
-      const tagOptions = `<option value="">Sin etiqueta</option>` + customTags.map(t => {
-        return `<option value="${t}" ${v.customTag === t ? 'selected' : ''}>${t}</option>`;
-      }).join('');
-
       const channelOptions = channels.map(ch => {
         return `<option value="${ch.name}" ${v.channelName === ch.name ? 'selected' : ''}>${ch.name}</option>`;
       }).join('');
       const manualOption = `<option value="Manual" ${v.channelName === 'Manual' ? 'selected' : ''}>Manual</option>`;
+
+      const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
+      const tagPillsHtml = videoTags.map(t => {
+        return `<span class="badge video-tag-pill">${t} <span class="video-tag-remove" data-id="${v.id}" data-tag="${t}" title="Quitar etiqueta">&times;</span></span>`;
+      }).join('');
+
+      const availableTagsToAdd = customTags.filter(t => !videoTags.includes(t));
+      const addTagSelectHtml = (availableTagsToAdd.length > 0) ? `
+        <select class="library-add-tag-select badge" data-id="${v.id}" title="Añadir etiqueta">
+          <option value="" disabled selected>+ Etiqueta</option>
+          ${availableTagsToAdd.map(t => `<option value="${t}">${t}</option>`).join('')}
+        </select>
+      ` : '';
 
       card.innerHTML = `
         <img src="${v.thumbnail}" class="thumbnail" alt="thumbnail">
@@ -881,7 +981,8 @@ function renderVideos() {
             <select class="library-level-select badge" data-id="${v.id}">
               ${levelOptions}
             </select>
-            ${customTags.length > 0 ? `<select class="library-tag-select badge" data-id="${v.id}">${tagOptions}</select>` : ''}
+            ${tagPillsHtml}
+            ${addTagSelectHtml}
             ${durationBadge}
           </div>
         </div>
@@ -898,6 +999,12 @@ function renderVideos() {
   }
 }
 
+function extractPlaylistId(url) {
+  if (!url) return null;
+  const match = url.match(/[?&]list=([^#&?]+)/);
+  return (match && match[1]) ? match[1] : null;
+}
+
 function extractVideoId(url) {
   if (!url) return null;
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
@@ -909,10 +1016,105 @@ async function addVideoByUrl() {
   const urlInput = document.getElementById('videoUrlInput');
   const addBtn = document.getElementById('addVideoUrlBtn');
   const url = urlInput.value.trim();
-  
   if (!url) return;
-  await addVideoFromUrl(url, addBtn);
-  urlInput.value = '';
+
+  const playlistId = extractPlaylistId(url);
+  // Si es una URL dedicada de playlist (playlist?list=...) o solo tiene list=...
+  if (playlistId && (url.includes('playlist?list=') || !url.includes('watch?v='))) {
+    await addPlaylistByUrl(playlistId, addBtn);
+    urlInput.value = '';
+    return;
+  }
+
+  const videoId = extractVideoId(url);
+  if (videoId) {
+    await addVideoFromUrl(url, addBtn);
+    urlInput.value = '';
+    return;
+  }
+
+  if (playlistId) {
+    await addPlaylistByUrl(playlistId, addBtn);
+    urlInput.value = '';
+    return;
+  }
+
+  alert('Por favor, introduce una URL válida de video o lista de reproducción (Playlist) de YouTube.');
+}
+
+async function addPlaylistByUrl(playlistId, addBtn) {
+  addBtn.disabled = true;
+  addBtn.textContent = 'Importando Playlist...';
+  try {
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+    const response = await fetchProxy(rssUrl);
+    if (!response.ok) {
+      throw new Error('No se pudo acceder a la lista de reproducción. Verifica que sea pública.');
+    }
+    const text = await response.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(text, "text/xml");
+    
+    const playlistTitle = xmlDoc.getElementsByTagName('title')[0]?.textContent || 'Playlist de YouTube';
+    const entries = Array.from(xmlDoc.getElementsByTagName('entry'));
+    
+    if (entries.length === 0) {
+      alert('No se encontraron videos en esta lista de reproducción o la lista no es pública.');
+      return;
+    }
+
+    let addedCount = 0;
+    let existingCount = 0;
+
+    entries.forEach(entry => {
+      const videoId = entry.getElementsByTagName('yt:videoId')[0]?.textContent || '';
+      if (!videoId) return;
+
+      if (library.some(v => v.id === videoId)) {
+        existingCount++;
+        return;
+      }
+
+      const title = entry.getElementsByTagName('title')[0]?.textContent || `Video (${videoId})`;
+      const mediaGroup = entry.getElementsByTagName('media:group')[0];
+      const thumbnail = mediaGroup?.getElementsByTagName('media:thumbnail')[0]?.getAttribute('url') || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+      const author = entry.getElementsByTagName('author')[0]?.getElementsByTagName('name')[0]?.textContent || playlistTitle;
+      const date = entry.getElementsByTagName('published')[0]?.textContent || new Date().toISOString();
+
+      const newVideo = {
+        id: videoId,
+        title: title,
+        thumbnail: thumbnail,
+        channelName: author || 'Playlist',
+        priority: 99,
+        date: date,
+        level: 'basic',
+        durationSeconds: null,
+        types: ['unknown'],
+        category: 'unknown',
+        favorite: false,
+        customTags: []
+      };
+
+      library.push(newVideo);
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      storage.set({ library }, () => {
+        renderVideos();
+        alert(`¡Lista de reproducción importada con éxito!\nSe agregaron ${addedCount} videos nuevos a tu biblioteca.${existingCount > 0 ? ` (${existingCount} ya existían).` : ''}`);
+      });
+    } else {
+      alert(`Todos los videos (${existingCount}) de esta lista de reproducción ya estaban en tu biblioteca.`);
+    }
+  } catch (error) {
+    console.error('Error al importar playlist:', error);
+    alert('Error al importar la lista de reproducción: ' + error.message);
+  } finally {
+    addBtn.disabled = false;
+    addBtn.textContent = 'Añadir a Biblioteca';
+  }
 }
 
 async function addVideoFromUrl(url, addBtn) {
@@ -940,7 +1142,7 @@ async function addVideoFromUrl(url, addBtn) {
     types: ['unknown'],
     category: 'unknown',
     favorite: false,
-    customTag: ''
+    customTags: []
   };
 
   library.push(newVideo);

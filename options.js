@@ -132,33 +132,74 @@ document.addEventListener('DOMContentLoaded', () => {
     customTagsContainer.innerHTML = '';
     customTags.forEach((tag, index) => {
       const span = document.createElement('span');
-      span.textContent = tag;
+      span.textContent = tag + ' ';
       span.style.background = '#444';
       span.style.padding = '4px 8px';
       span.style.borderRadius = '12px';
       span.style.fontSize = '12px';
-      span.style.display = 'flex';
+      span.style.display = 'inline-flex';
       span.style.alignItems = 'center';
-      span.style.gap = '5px';
+      span.style.gap = '4px';
+
+      const leftBtn = document.createElement('button');
+      leftBtn.textContent = '◀';
+      leftBtn.style.background = 'transparent';
+      leftBtn.style.border = 'none';
+      leftBtn.style.color = '#aaa';
+      leftBtn.style.cursor = 'pointer';
+      leftBtn.style.fontSize = '10px';
+      leftBtn.style.padding = '0';
+      leftBtn.disabled = index === 0;
+      leftBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveCustomTag(index, -1);
+      });
+
+      const rightBtn = document.createElement('button');
+      rightBtn.textContent = '▶';
+      rightBtn.style.background = 'transparent';
+      rightBtn.style.border = 'none';
+      rightBtn.style.color = '#aaa';
+      rightBtn.style.cursor = 'pointer';
+      rightBtn.style.fontSize = '10px';
+      rightBtn.style.padding = '0';
+      rightBtn.disabled = index === customTags.length - 1;
+      rightBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveCustomTag(index, 1);
+      });
 
       const delBtn = document.createElement('button');
-      delBtn.textContent = 'x';
+      delBtn.textContent = '×';
       delBtn.style.background = 'transparent';
       delBtn.style.border = 'none';
       delBtn.style.color = '#ff6b6b';
       delBtn.style.padding = '0';
-      delBtn.style.margin = '0';
+      delBtn.style.marginLeft = '2px';
       delBtn.style.fontSize = '14px';
       delBtn.style.cursor = 'pointer';
-      delBtn.addEventListener('click', () => {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         customTags.splice(index, 1);
         chrome.storage.local.set({ customTags }, () => {
           renderCustomTags();
         });
       });
 
+      span.appendChild(leftBtn);
+      span.appendChild(rightBtn);
       span.appendChild(delBtn);
       customTagsContainer.appendChild(span);
+    });
+  }
+
+  function moveCustomTag(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= customTags.length) return;
+    const [movedTag] = customTags.splice(index, 1);
+    customTags.splice(newIndex, 0, movedTag);
+    chrome.storage.local.set({ customTags }, () => {
+      renderCustomTags();
     });
   }
 });

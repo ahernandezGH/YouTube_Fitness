@@ -385,3 +385,42 @@ select.badge {
   -webkit-appearance: auto;
   padding-right: 18px !important;
 }
+
+.video-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
+  padding: 3px 7px 3px 9px !important;
+}
+
+.video-tag-remove {
+  cursor: pointer;
+  color: rgba(248, 113, 113, 0.7);
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  margin-left: 2px;
+  transition: color 0.15s ease;
+}
+
+.video-tag-remove:hover {
+  color: var(--danger-hover);
+}
+
+.library-add-tag-select {
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.2) !important;
+  color: #8b949e !important;
+  border-radius: 20px !important;
+  cursor: pointer;
+}
+
+.library-add-tag-select:hover {
+  border-color: var(--primary-color) !important;
+  color: var(--text-title) !important;
+}
