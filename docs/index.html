@@ -20,6 +20,9 @@
         <h1>YouTube Fitness Tracker</h1>
       </div>
       <div class="header-actions">
+        <button id="themeToggleBtn" class="theme-toggle-btn" title="Cambiar tema (Claro / Oscuro)">
+          <span id="themeIcon">🌙</span>
+        </button>
         <div id="authContainer">
           <span id="userNameDisplay" style="font-size: 13px; color: #8b949e; display: none; margin-right: 8px;"></span>
           <button id="authBtn" class="auth-btn auth-btn-login">Iniciar Sesión</button>
@@ -156,6 +159,19 @@
               <button id="addTagBtn">Agregar</button>
             </div>
             <div id="customTagsContainer" class="tags-container"></div>
+          </div>
+
+          <!-- Theme Settings Card -->
+          <div class="card">
+            <h3>Apariencia</h3>
+            <p class="card-subtitle">Personaliza el tema visual de la aplicación.</p>
+            <div class="form-group-row">
+              <label for="themeSelect">Tema visual:</label>
+              <select id="themeSelect" style="max-width: 160px;">
+                <option value="dark">🌙 Oscuro</option>
+                <option value="light">☀️ Claro</option>
+              </select>
+            </div>
           </div>
 
           <!-- Backup Card -->

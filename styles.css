@@ -14,6 +14,22 @@
   --danger-hover: #ef4444;
 }
 
+[data-theme="light"] {
+  --bg-color: #f8fafc;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --text-color: #475569;
+  --text-title: #0f172a;
+  --primary-color: #059669;
+  --primary-hover: #047857;
+  --primary-glow: rgba(5, 150, 105, 0.25);
+  --badge-bg: rgba(0, 0, 0, 0.05);
+  --badge-border: rgba(0, 0, 0, 0.08);
+  --badge-text: #64748b;
+  --danger-color: #ef4444;
+  --danger-hover: #dc2626;
+}
+
 body {
   font-family: 'Outfit', sans-serif;
   margin: 0;
@@ -22,6 +38,7 @@ body {
   color: var(--text-color);
   width: 380px;
   box-sizing: border-box;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .options-body {

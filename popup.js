@@ -28,6 +28,7 @@ let discarded = [];
 let userChannels = [];
 let currentActiveTabUrl = null;
 let activeTab = 'feed';
+let currentTheme = 'dark';
 
 document.addEventListener('DOMContentLoaded', () => {
   const feedTabBtn = document.getElementById('feedTabBtn');
@@ -57,6 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const excludeTagFilterEl = document.getElementById('excludeTagFilter');
   if (excludeTagFilterEl) {
     excludeTagFilterEl.addEventListener('change', renderVideos);
+  }
+
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      setTheme(currentTheme === 'light' ? 'dark' : 'light');
+    });
   }
 
   const saveActiveTabBtn = document.getElementById('saveActiveTabBtn');
@@ -189,7 +197,11 @@ async function loadVideos() {
   const videoListEl = document.getElementById('videoList');
   videoListEl.innerHTML = 'Cargando videos...';
 
-  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount', 'customTags', 'discarded'], async (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount', 'customTags', 'discarded', 'theme'], async (data) => {
+    // Theme init
+    const savedTheme = data.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    setTheme(savedTheme, false);
+
     library = data.library || [];
     // Normalización de etiquetas
     let hadNormalization = false;
@@ -422,6 +434,25 @@ function toggleLibraryVideoFavorite(videoId) {
     chrome.storage.local.set({ library }, () => {
       renderVideos();
     });
+  }
+}
+
+function setTheme(theme, shouldSave = true) {
+  currentTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  
+  const themeIconEl = document.getElementById('themeIcon');
+  if (themeIconEl) {
+    themeIconEl.textContent = currentTheme === 'light' ? '☀️' : '🌙';
+  }
+
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.title = currentTheme === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro';
+  }
+
+  if (shouldSave) {
+    chrome.storage.local.set({ theme: currentTheme });
   }
 }
 

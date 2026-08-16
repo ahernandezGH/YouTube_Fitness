@@ -11,7 +11,10 @@
 <body>
   <div class="header">
     <h2>Mis Entrenamientos</h2>
-    <button id="refreshBtn">Actualizar</button>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button id="themeToggleBtn" style="background: none; border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 8px; cursor: pointer; color: var(--text-title);" title="Cambiar tema"><span id="themeIcon">🌙</span></button>
+      <button id="refreshBtn">Actualizar</button>
+    </div>
   </div>
 
   <div id="activeTabAlert" style="display: none; background-color: rgba(66, 133, 244, 0.1); border-left: 3px solid #4285f4; padding: 10px; margin: 10px 15px; border-radius: 4px; font-size: 13px; align-items: center; justify-content: space-between;">

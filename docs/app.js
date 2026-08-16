@@ -162,6 +162,7 @@ let customTags = [];
 let discarded = [];
 let activeTab = 'feed';
 let channels = [];
+let currentTheme = 'dark';
 
 // Helper function to bypass CORS using a free proxy
 async function fetchProxy(url) {
@@ -220,6 +221,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const excludeTagFilterEl = document.getElementById('excludeTagFilter');
   if (excludeTagFilterEl) {
     excludeTagFilterEl.addEventListener('change', renderVideos);
+  }
+
+  // Theme Toggle Button & Select
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      setTheme(currentTheme === 'light' ? 'dark' : 'light');
+    });
+  }
+
+  const themeSelectEl = document.getElementById('themeSelect');
+  if (themeSelectEl) {
+    themeSelectEl.addEventListener('change', (e) => {
+      setTheme(e.target.value);
+    });
   }
 
   // Manual Add Video
@@ -394,11 +410,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initial config loading
 function initLoad() {
-  storage.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags', 'discarded', 'library'], (data) => {
+  storage.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags', 'discarded', 'library', 'theme'], (data) => {
     channels = data.channels || [];
     customTags = data.customTags || [];
     discarded = data.discarded || [];
     library = data.library || [];
+
+    // Theme initialization
+    const savedTheme = data.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    setTheme(savedTheme, false);
 
     // Set configuration inputs
     document.getElementById('minDuration').value = data.minDuration !== undefined ? data.minDuration : 10;
@@ -410,6 +430,30 @@ function initLoad() {
     updateCustomTagFilters();
     loadVideos();
   });
+}
+
+function setTheme(theme, shouldSave = true) {
+  currentTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  
+  const themeIconEl = document.getElementById('themeIcon');
+  if (themeIconEl) {
+    themeIconEl.textContent = currentTheme === 'light' ? '☀️' : '🌙';
+  }
+
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.title = currentTheme === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro';
+  }
+
+  const themeSelectEl = document.getElementById('themeSelect');
+  if (themeSelectEl) {
+    themeSelectEl.value = currentTheme;
+  }
+
+  if (shouldSave) {
+    storage.set({ theme: currentTheme });
+  }
 }
 
 function renderChannels() {

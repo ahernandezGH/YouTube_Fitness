@@ -4,7 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let channels = [];
   let customTags = [];
 
-  chrome.storage.local.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags'], (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags', 'theme'], (data) => {
+    const currentTheme = data.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    const themeSelectEl = document.getElementById('themeSelect');
+    if (themeSelectEl) {
+      themeSelectEl.value = currentTheme;
+      themeSelectEl.addEventListener('change', (e) => {
+        const newTheme = e.target.value;
+        document.documentElement.setAttribute('data-theme', newTheme);
+        chrome.storage.local.set({ theme: newTheme });
+      });
+    }
+
     if (data.channels) {
       channels = data.channels;
       renderChannels();
