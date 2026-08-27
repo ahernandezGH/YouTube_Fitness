@@ -163,6 +163,8 @@ let discarded = [];
 let activeTab = 'feed';
 let channels = [];
 let currentTheme = 'dark';
+let selectedIncludeTags = [];
+let selectedExcludeTags = [];
 
 // Helper function to bypass CORS using a free proxy
 async function fetchProxy(url) {
@@ -213,14 +215,80 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('levelFilter').addEventListener('change', renderVideos);
   document.getElementById('channelFilter').addEventListener('change', renderVideos);
   
-  const customTagFilterEl = document.getElementById('customTagFilter');
-  if (customTagFilterEl) {
-    customTagFilterEl.addEventListener('change', renderVideos);
+  // Multi-select Tag Filters Dropdown Controls
+  const includeTagsDropdown = document.getElementById('includeTagsDropdown');
+  const includeTagsBtn = document.getElementById('includeTagsBtn');
+  const includeTagsMenu = document.getElementById('includeTagsMenu');
+
+  const excludeTagsDropdown = document.getElementById('excludeTagsDropdown');
+  const excludeTagsBtn = document.getElementById('excludeTagsBtn');
+  const excludeTagsMenu = document.getElementById('excludeTagsMenu');
+
+  if (includeTagsBtn) {
+    includeTagsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = includeTagsMenu.style.display === 'flex';
+      includeTagsMenu.style.display = isOpen ? 'none' : 'flex';
+      includeTagsDropdown.classList.toggle('open', !isOpen);
+      if (excludeTagsMenu) {
+        excludeTagsMenu.style.display = 'none';
+        excludeTagsDropdown.classList.remove('open');
+      }
+    });
   }
 
-  const excludeTagFilterEl = document.getElementById('excludeTagFilter');
-  if (excludeTagFilterEl) {
-    excludeTagFilterEl.addEventListener('change', renderVideos);
+  if (excludeTagsBtn) {
+    excludeTagsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = excludeTagsMenu.style.display === 'flex';
+      excludeTagsMenu.style.display = isOpen ? 'none' : 'flex';
+      excludeTagsDropdown.classList.toggle('open', !isOpen);
+      if (includeTagsMenu) {
+        includeTagsMenu.style.display = 'none';
+        includeTagsDropdown.classList.remove('open');
+      }
+    });
+  }
+
+  if (includeTagsMenu) includeTagsMenu.addEventListener('click', (e) => e.stopPropagation());
+  if (excludeTagsMenu) excludeTagsMenu.addEventListener('click', (e) => e.stopPropagation());
+
+  document.addEventListener('click', () => {
+    if (includeTagsMenu) {
+      includeTagsMenu.style.display = 'none';
+      includeTagsDropdown.classList.remove('open');
+    }
+    if (excludeTagsMenu) {
+      excludeTagsMenu.style.display = 'none';
+      excludeTagsDropdown.classList.remove('open');
+    }
+  });
+
+  const selectAllIncludeTagsBtn = document.getElementById('selectAllIncludeTagsBtn');
+  if (selectAllIncludeTagsBtn) {
+    selectAllIncludeTagsBtn.addEventListener('click', () => {
+      selectedIncludeTags = [];
+      updateCustomTagFilters();
+      renderVideos();
+    });
+  }
+
+  const clearIncludeTagsBtn = document.getElementById('clearIncludeTagsBtn');
+  if (clearIncludeTagsBtn) {
+    clearIncludeTagsBtn.addEventListener('click', () => {
+      selectedIncludeTags = [];
+      updateCustomTagFilters();
+      renderVideos();
+    });
+  }
+
+  const clearExcludeTagsBtn = document.getElementById('clearExcludeTagsBtn');
+  if (clearExcludeTagsBtn) {
+    clearExcludeTagsBtn.addEventListener('click', () => {
+      selectedExcludeTags = [];
+      updateCustomTagFilters();
+      renderVideos();
+    });
   }
 
   // Theme Toggle Button & Select
@@ -543,34 +611,125 @@ function moveCustomTag(index, direction) {
 }
 
 function updateCustomTagFilters() {
-  const tagFilterEl = document.getElementById('customTagFilter');
-  const excludeFilterEl = document.getElementById('excludeTagFilter');
-  
-  if (tagFilterEl) {
-    const currentSelected = tagFilterEl.value;
-    tagFilterEl.innerHTML = '<option value="all">Todas las etiquetas</option><option value="none">Sin etiqueta</option>';
-    customTags.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      opt.textContent = t;
-      tagFilterEl.appendChild(opt);
+  // Limpiar etiquetas eliminadas de las selecciones
+  selectedIncludeTags = selectedIncludeTags.filter(t => t === 'none' || customTags.includes(t));
+  selectedExcludeTags = selectedExcludeTags.filter(t => customTags.includes(t));
+
+  // Renderizar opciones de inclusión
+  const includeOptionsList = document.getElementById('includeTagsOptionsList');
+  if (includeOptionsList) {
+    includeOptionsList.innerHTML = '';
+
+    // Opción: Sin etiqueta
+    const noTagLabel = document.createElement('label');
+    noTagLabel.className = 'multi-select-option';
+    const noTagCheckbox = document.createElement('input');
+    noTagCheckbox.type = 'checkbox';
+    noTagCheckbox.value = 'none';
+    noTagCheckbox.checked = selectedIncludeTags.includes('none');
+    noTagCheckbox.addEventListener('change', () => {
+      toggleIncludeTag('none', noTagCheckbox.checked);
     });
-    if (Array.from(tagFilterEl.options).some(o => o.value === currentSelected)) {
-      tagFilterEl.value = currentSelected;
+    noTagLabel.appendChild(noTagCheckbox);
+    noTagLabel.appendChild(document.createTextNode(' Sin etiqueta'));
+    includeOptionsList.appendChild(noTagLabel);
+
+    // Opciones por cada etiqueta personalizada
+    customTags.forEach(tag => {
+      const tagLabel = document.createElement('label');
+      tagLabel.className = 'multi-select-option';
+      const tagCheckbox = document.createElement('input');
+      tagCheckbox.type = 'checkbox';
+      tagCheckbox.value = tag;
+      tagCheckbox.checked = selectedIncludeTags.includes(tag);
+      tagCheckbox.addEventListener('change', () => {
+        toggleIncludeTag(tag, tagCheckbox.checked);
+      });
+      tagLabel.appendChild(tagCheckbox);
+      tagLabel.appendChild(document.createTextNode(` ${tag}`));
+      includeOptionsList.appendChild(tagLabel);
+    });
+  }
+
+  // Renderizar opciones de exclusión
+  const excludeOptionsList = document.getElementById('excludeTagsOptionsList');
+  if (excludeOptionsList) {
+    excludeOptionsList.innerHTML = '';
+    customTags.forEach(tag => {
+      const tagLabel = document.createElement('label');
+      tagLabel.className = 'multi-select-option exclude-option';
+      const tagCheckbox = document.createElement('input');
+      tagCheckbox.type = 'checkbox';
+      tagCheckbox.value = tag;
+      tagCheckbox.checked = selectedExcludeTags.includes(tag);
+      tagCheckbox.addEventListener('change', () => {
+        toggleExcludeTag(tag, tagCheckbox.checked);
+      });
+      tagLabel.appendChild(tagCheckbox);
+      tagLabel.appendChild(document.createTextNode(` ${tag}`));
+      excludeOptionsList.appendChild(tagLabel);
+    });
+  }
+
+  updateFilterButtonLabels();
+}
+
+function toggleIncludeTag(tag, isChecked) {
+  if (isChecked) {
+    if (!selectedIncludeTags.includes(tag)) selectedIncludeTags.push(tag);
+  } else {
+    selectedIncludeTags = selectedIncludeTags.filter(t => t !== tag);
+  }
+  updateFilterButtonLabels();
+  renderVideos();
+}
+
+function toggleExcludeTag(tag, isChecked) {
+  if (isChecked) {
+    if (!selectedExcludeTags.includes(tag)) selectedExcludeTags.push(tag);
+  } else {
+    selectedExcludeTags = selectedExcludeTags.filter(t => t !== tag);
+  }
+  updateFilterButtonLabels();
+  renderVideos();
+}
+
+function updateFilterButtonLabels() {
+  const includeLabel = document.getElementById('includeTagsLabel');
+  const includeBtn = document.getElementById('includeTagsBtn');
+  if (includeLabel && includeBtn) {
+    if (selectedIncludeTags.length === 0) {
+      includeLabel.textContent = 'Todas las etiquetas';
+      includeBtn.classList.remove('active-filter');
+    } else if (selectedIncludeTags.length === 1) {
+      const name = selectedIncludeTags[0] === 'none' ? 'Sin etiqueta' : selectedIncludeTags[0];
+      includeLabel.textContent = name;
+      includeBtn.classList.add('active-filter');
+    } else if (selectedIncludeTags.length === 2) {
+      const names = selectedIncludeTags.map(t => t === 'none' ? 'Sin etiqueta' : t).join(', ');
+      includeLabel.textContent = names;
+      includeBtn.classList.add('active-filter');
+    } else {
+      includeLabel.textContent = `${selectedIncludeTags.length} seleccionadas`;
+      includeBtn.classList.add('active-filter');
     }
   }
 
-  if (excludeFilterEl) {
-    const currentExclude = excludeFilterEl.value;
-    excludeFilterEl.innerHTML = '<option value="none">Ninguna (no excluir)</option>';
-    customTags.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      opt.textContent = t;
-      excludeFilterEl.appendChild(opt);
-    });
-    if (Array.from(excludeFilterEl.options).some(o => o.value === currentExclude)) {
-      excludeFilterEl.value = currentExclude;
+  const excludeLabel = document.getElementById('excludeTagsLabel');
+  const excludeBtn = document.getElementById('excludeTagsBtn');
+  if (excludeLabel && excludeBtn) {
+    if (selectedExcludeTags.length === 0) {
+      excludeLabel.textContent = 'Ninguna (no excluir)';
+      excludeBtn.classList.remove('active-exclude');
+    } else if (selectedExcludeTags.length === 1) {
+      excludeLabel.textContent = `Excluir: ${selectedExcludeTags[0]}`;
+      excludeBtn.classList.add('active-exclude');
+    } else if (selectedExcludeTags.length === 2) {
+      excludeLabel.textContent = `Excluir: ${selectedExcludeTags.join(', ')}`;
+      excludeBtn.classList.add('active-exclude');
+    } else {
+      excludeLabel.textContent = `Excluir: ${selectedExcludeTags.length} etiquetas`;
+      excludeBtn.classList.add('active-exclude');
     }
   }
 }
@@ -911,12 +1070,7 @@ function renderVideos() {
   const levelFilter = document.getElementById('levelFilter').value;
   const channelFilter = document.getElementById('channelFilter').value;
   
-  const customTagFilterEl = document.getElementById('customTagFilter');
-  const customTagFilter = customTagFilterEl ? customTagFilterEl.value : 'all';
   const customTagFilterContainer = document.getElementById('customTagFilterContainer');
-  
-  const excludeTagFilterEl = document.getElementById('excludeTagFilter');
-  const excludeTagFilter = excludeTagFilterEl ? excludeTagFilterEl.value : 'none';
   const excludeTagFilterContainer = document.getElementById('excludeTagFilterContainer');
 
   const videoListEl = document.getElementById('videoList');
@@ -984,18 +1138,23 @@ function renderVideos() {
       
       const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
       
+      // Filtrado múltiple de etiquetas incluidas
       let matchIncludeTag = false;
-      if (customTagFilter === 'all') {
+      if (selectedIncludeTags.length === 0) {
         matchIncludeTag = true;
-      } else if (customTagFilter === 'none') {
-        matchIncludeTag = videoTags.length === 0;
       } else {
-        matchIncludeTag = videoTags.includes(customTagFilter);
+        const matchNoTag = selectedIncludeTags.includes('none') && videoTags.length === 0;
+        const matchSpecificTag = selectedIncludeTags.some(t => t !== 'none' && videoTags.includes(t));
+        matchIncludeTag = matchNoTag || matchSpecificTag;
       }
 
+      // Filtrado múltiple de etiquetas excluidas
       let matchExcludeTag = true;
-      if (excludeTagFilter !== 'none') {
-        matchExcludeTag = !videoTags.includes(excludeTagFilter);
+      if (selectedExcludeTags.length > 0) {
+        const hasExcludedTag = selectedExcludeTags.some(t => videoTags.includes(t));
+        if (hasExcludedTag) {
+          matchExcludeTag = false;
+        }
       }
       
       return matchType && matchLevel && matchChannel && matchIncludeTag && matchExcludeTag;

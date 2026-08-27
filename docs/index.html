@@ -90,18 +90,37 @@
             </select>
           </div>
 
-          <div class="filter-group" id="customTagFilterContainer" style="display: none;">
-            <label for="customTagFilter">Etiqueta Incluida</label>
-            <select id="customTagFilter">
-              <option value="all">Todas las etiquetas</option>
-            </select>
+          <div class="filter-group multi-select-group" id="customTagFilterContainer" style="display: none;">
+            <label>Etiquetas Incluidas</label>
+            <div class="multi-select-dropdown" id="includeTagsDropdown">
+              <button type="button" class="multi-select-btn" id="includeTagsBtn">
+                <span class="multi-select-label" id="includeTagsLabel">Todas las etiquetas</span>
+                <span class="multi-select-arrow">▾</span>
+              </button>
+              <div class="multi-select-menu" id="includeTagsMenu" style="display: none;">
+                <div class="multi-select-actions">
+                  <button type="button" class="multi-select-action-btn" id="selectAllIncludeTagsBtn">Todas</button>
+                  <button type="button" class="multi-select-action-btn" id="clearIncludeTagsBtn">Limpiar</button>
+                </div>
+                <div class="multi-select-options" id="includeTagsOptionsList"></div>
+              </div>
+            </div>
           </div>
 
-          <div class="filter-group" id="excludeTagFilterContainer" style="display: none;">
-            <label for="excludeTagFilter">Excluir Etiqueta</label>
-            <select id="excludeTagFilter">
-              <option value="none">Ninguna (no excluir)</option>
-            </select>
+          <div class="filter-group multi-select-group" id="excludeTagFilterContainer" style="display: none;">
+            <label>Excluir Etiquetas</label>
+            <div class="multi-select-dropdown" id="excludeTagsDropdown">
+              <button type="button" class="multi-select-btn" id="excludeTagsBtn">
+                <span class="multi-select-label" id="excludeTagsLabel">Ninguna (no excluir)</span>
+                <span class="multi-select-arrow">▾</span>
+              </button>
+              <div class="multi-select-menu" id="excludeTagsMenu" style="display: none;">
+                <div class="multi-select-actions">
+                  <button type="button" class="multi-select-action-btn danger-action" id="clearExcludeTagsBtn">Ninguna</button>
+                </div>
+                <div class="multi-select-options" id="excludeTagsOptionsList"></div>
+              </div>
+            </div>
           </div>
         </div>
 

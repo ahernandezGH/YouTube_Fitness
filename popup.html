@@ -49,13 +49,36 @@
       <option value="all">Todos los canales</option>
     </select>
 
-    <select id="customTagFilter" style="display: none;">
-      <option value="all">Todas las etiquetas</option>
-    </select>
+    <div class="multi-select-group" id="customTagFilterContainer" style="display: none; width: 100%; margin-top: 4px;">
+      <div class="multi-select-dropdown" id="includeTagsDropdown">
+        <button type="button" class="multi-select-btn" id="includeTagsBtn">
+          <span class="multi-select-label" id="includeTagsLabel">Todas las etiquetas</span>
+          <span class="multi-select-arrow">▾</span>
+        </button>
+        <div class="multi-select-menu" id="includeTagsMenu" style="display: none;">
+          <div class="multi-select-actions">
+            <button type="button" class="multi-select-action-btn" id="selectAllIncludeTagsBtn">Todas</button>
+            <button type="button" class="multi-select-action-btn" id="clearIncludeTagsBtn">Limpiar</button>
+          </div>
+          <div class="multi-select-options" id="includeTagsOptionsList"></div>
+        </div>
+      </div>
+    </div>
 
-    <select id="excludeTagFilter" style="display: none;">
-      <option value="none">Excluir: Ninguna</option>
-    </select>
+    <div class="multi-select-group" id="excludeTagFilterContainer" style="display: none; width: 100%; margin-top: 4px;">
+      <div class="multi-select-dropdown" id="excludeTagsDropdown">
+        <button type="button" class="multi-select-btn" id="excludeTagsBtn">
+          <span class="multi-select-label" id="excludeTagsLabel">Ninguna (no excluir)</span>
+          <span class="multi-select-arrow">▾</span>
+        </button>
+        <div class="multi-select-menu" id="excludeTagsMenu" style="display: none;">
+          <div class="multi-select-actions">
+            <button type="button" class="multi-select-action-btn danger-action" id="clearExcludeTagsBtn">Ninguna</button>
+          </div>
+          <div class="multi-select-options" id="excludeTagsOptionsList"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="addVideoForm" style="display: none; gap: 8px; margin-bottom: 15px; padding: 10px; background-color: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--card-border); align-items: center;">
