@@ -590,3 +590,22 @@ select.badge {
 .multi-select-option.exclude-option input[type="checkbox"] {
   accent-color: var(--danger-color);
 }
+
+/* Preset Filters */
+.preset-checkbox-group {
+  max-height: 120px;
+  overflow-y: auto;
+  background: var(--bg-color);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preset-filters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

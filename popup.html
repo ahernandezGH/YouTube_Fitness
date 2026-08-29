@@ -47,7 +47,15 @@
     
     <select id="channelFilter">
       <option value="all">Todos los canales</option>
-    </select>
+    <div id="presetFilterContainer" style="display: none; width: 100%; margin-top: 4px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+        <label for="presetFilterSelect" style="font-size: 11px; color: #8b949e;">Filtro Guardado:</label>
+        <button type="button" id="saveCurrentFilterBtn" style="font-size: 10px; padding: 0; background: none; border: none; color: var(--primary-color); cursor: pointer; font-weight: 600;">+ Guardar actual</button>
+      </div>
+      <select id="presetFilterSelect" style="width: 100%; font-size: 12px; padding: 6px 8px;">
+        <option value="">Personalizado / Manual</option>
+      </select>
+    </div>
 
     <div class="multi-select-group" id="customTagFilterContainer" style="display: none; width: 100%; margin-top: 4px;">
       <div class="multi-select-dropdown" id="includeTagsDropdown">
