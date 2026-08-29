@@ -540,6 +540,125 @@ select:focus, input:focus {
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
+/* Preconfigured Preset Filters in Config */
+.preset-checkbox-group {
+  background-color: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px;
+  max-height: 140px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preset-checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.preset-checkbox-group label:hover {
+  background-color: var(--badge-bg);
+  color: var(--text-title);
+}
+
+.preset-checkbox-group input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--primary-color);
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.preset-checkbox-group.exclude-group input[type="checkbox"] {
+  accent-color: var(--danger-color);
+}
+
+.preset-filters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preset-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background-color: var(--list-item-bg);
+  border: 1px solid var(--list-item-border);
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.preset-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preset-name {
+  font-weight: 600;
+  color: var(--text-title);
+  font-size: 13px;
+}
+
+.preset-tags-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.preset-tag-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.preset-tag-badge.include {
+  background-color: var(--tag-pill-bg);
+  border: 1px solid var(--tag-pill-border);
+  color: var(--tag-pill-color);
+}
+
+.preset-tag-badge.exclude {
+  background-color: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--danger-color);
+}
+
+.preset-item button.btn-delete-preset {
+  background-color: transparent;
+  color: var(--danger-color);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.preset-item button.btn-delete-preset:hover {
+  background-color: rgba(248, 113, 113, 0.1);
+  color: var(--danger-hover);
+  border-color: var(--danger-hover);
+  box-shadow: none;
+  transform: none;
+}
+
 /* Channels list in config */
 .channel-list {
   padding-left: 0;

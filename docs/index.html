@@ -188,6 +188,39 @@
             <div id="customTagsContainer" class="tags-container"></div>
           </div>
 
+          <!-- Preconfigured Filters Card -->
+          <div class="card" style="grid-column: span 2;">
+            <h3>Filtros Preconfigurados (Biblioteca)</h3>
+            <p class="card-subtitle">Crea y administra combinaciones de etiquetas para aplicarlas rápidamente en tu biblioteca.</p>
+            
+            <div class="preset-create-form" style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); padding: 16px; border-radius: 10px; margin-bottom: 16px;">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label for="newPresetName" style="font-size: 12px; font-weight: 600; color: #8b949e;">Nombre del Filtro:</label>
+                <input type="text" id="newPresetName" placeholder="Ej: Cardio intenso sin brazos">
+              </div>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; color: #8b949e; display: block; margin-bottom: 6px;">Etiquetas a Incluir:</label>
+                  <div id="presetFormIncludeTags" class="preset-checkbox-group"></div>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; color: #8b949e; display: block; margin-bottom: 6px;">Etiquetas a Excluir:</label>
+                  <div id="presetFormExcludeTags" class="preset-checkbox-group exclude-group"></div>
+                </div>
+              </div>
+              
+              <button type="button" id="createPresetBtn">Guardar Filtro Preconfigurado</button>
+            </div>
+
+            <div>
+              <h4 style="font-size: 13px; font-weight: 600; color: var(--text-title); margin-bottom: 10px; margin-top: 0;">Tus Filtros Guardados:</h4>
+              <div id="presetFiltersList" class="preset-filters-list">
+                <div class="loading-placeholder" style="padding: 16px;">No tienes filtros preconfigurados aún.</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Theme Settings Card -->
           <div class="card">
             <h3>Apariencia</h3>
