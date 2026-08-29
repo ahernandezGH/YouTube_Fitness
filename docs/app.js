@@ -642,8 +642,8 @@ function moveCustomTag(index, direction) {
 
 function updateCustomTagFilters() {
   // Limpiar etiquetas eliminadas de las selecciones
-  selectedIncludeTags = selectedIncludeTags.filter(t => t === 'none' || customTags.includes(t));
-  selectedExcludeTags = selectedExcludeTags.filter(t => customTags.includes(t));
+  selectedIncludeTags = selectedIncludeTags.filter(t => t === 'none' || customTags.some(ct => ct.toLowerCase().trim() === t.toLowerCase().trim()));
+  selectedExcludeTags = selectedExcludeTags.filter(t => customTags.some(ct => ct.toLowerCase().trim() === t.toLowerCase().trim()));
 
   // Renderizar opciones de inclusión
   const includeOptionsList = document.getElementById('includeTagsOptionsList');
@@ -671,7 +671,7 @@ function updateCustomTagFilters() {
       const tagCheckbox = document.createElement('input');
       tagCheckbox.type = 'checkbox';
       tagCheckbox.value = tag;
-      tagCheckbox.checked = selectedIncludeTags.includes(tag);
+      tagCheckbox.checked = selectedIncludeTags.some(t => t.toLowerCase().trim() === tag.toLowerCase().trim());
       tagCheckbox.addEventListener('change', () => {
         toggleIncludeTag(tag, tagCheckbox.checked);
       });
@@ -691,7 +691,7 @@ function updateCustomTagFilters() {
       const tagCheckbox = document.createElement('input');
       tagCheckbox.type = 'checkbox';
       tagCheckbox.value = tag;
-      tagCheckbox.checked = selectedExcludeTags.includes(tag);
+      tagCheckbox.checked = selectedExcludeTags.some(t => t.toLowerCase().trim() === tag.toLowerCase().trim());
       tagCheckbox.addEventListener('change', () => {
         toggleExcludeTag(tag, tagCheckbox.checked);
       });
@@ -706,9 +706,11 @@ function updateCustomTagFilters() {
 
 function toggleIncludeTag(tag, isChecked) {
   if (isChecked) {
-    if (!selectedIncludeTags.includes(tag)) selectedIncludeTags.push(tag);
+    if (!selectedIncludeTags.some(t => t.toLowerCase().trim() === tag.toLowerCase().trim())) {
+      selectedIncludeTags.push(tag);
+    }
   } else {
-    selectedIncludeTags = selectedIncludeTags.filter(t => t !== tag);
+    selectedIncludeTags = selectedIncludeTags.filter(t => t.toLowerCase().trim() !== tag.toLowerCase().trim());
   }
   const presetSelect = document.getElementById('presetFilterSelect');
   if (presetSelect) presetSelect.value = '';
@@ -719,9 +721,11 @@ function toggleIncludeTag(tag, isChecked) {
 
 function toggleExcludeTag(tag, isChecked) {
   if (isChecked) {
-    if (!selectedExcludeTags.includes(tag)) selectedExcludeTags.push(tag);
+    if (!selectedExcludeTags.some(t => t.toLowerCase().trim() === tag.toLowerCase().trim())) {
+      selectedExcludeTags.push(tag);
+    }
   } else {
-    selectedExcludeTags = selectedExcludeTags.filter(t => t !== tag);
+    selectedExcludeTags = selectedExcludeTags.filter(t => t.toLowerCase().trim() !== tag.toLowerCase().trim());
   }
   const presetSelect = document.getElementById('presetFilterSelect');
   if (presetSelect) presetSelect.value = '';
@@ -733,6 +737,10 @@ function toggleExcludeTag(tag, isChecked) {
 function applyPresetFilter(filterId) {
   activePresetFilterId = filterId || '';
   if (!filterId) {
+    selectedIncludeTags = [];
+    selectedExcludeTags = [];
+    updateCustomTagFilters();
+    renderVideos();
     return;
   }
   const preset = presetFilters.find(p => p.id === filterId);
@@ -1160,6 +1168,14 @@ async function loadVideos() {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
 
+    // Deduplicación estricta de videos en el Feed por ID
+    const feedUniqueIds = new Set();
+    allVideos = allVideos.filter(v => {
+      if (feedUniqueIds.has(v.id)) return false;
+      feedUniqueIds.add(v.id);
+      return true;
+    });
+
     renderVideos();
   });
 }
@@ -1369,26 +1385,27 @@ function renderVideos() {
   } else {
     // Biblioteca
     const filteredVideos = library.filter(v => {
-      const matchType = typeFilter === 'all' || v.category === typeFilter;
+      const matchType = typeFilter === 'all' || v.category === typeFilter || (Array.isArray(v.types) && v.types.includes(typeFilter));
       const matchLevel = levelFilter === 'all' || v.level === levelFilter;
       const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
       
       const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
+      const videoTagsLower = videoTags.map(t => (t || '').toString().toLowerCase().trim());
       
-      // Filtrado múltiple de etiquetas incluidas
+      // Filtrado múltiple de etiquetas incluidas (insensible a mayúsculas/minúsculas)
       let matchIncludeTag = false;
       if (selectedIncludeTags.length === 0) {
         matchIncludeTag = true;
       } else {
         const matchNoTag = selectedIncludeTags.includes('none') && videoTags.length === 0;
-        const matchSpecificTag = selectedIncludeTags.some(t => t !== 'none' && videoTags.includes(t));
+        const matchSpecificTag = selectedIncludeTags.some(t => t !== 'none' && videoTagsLower.includes(t.toLowerCase().trim()));
         matchIncludeTag = matchNoTag || matchSpecificTag;
       }
 
-      // Filtrado múltiple de etiquetas excluidas
+      // Filtrado múltiple de etiquetas excluidas (insensible a mayúsculas/minúsculas)
       let matchExcludeTag = true;
       if (selectedExcludeTags.length > 0) {
-        const hasExcludedTag = selectedExcludeTags.some(t => videoTags.includes(t));
+        const hasExcludedTag = selectedExcludeTags.some(t => t !== 'none' && videoTagsLower.includes(t.toLowerCase().trim()));
         if (hasExcludedTag) {
           matchExcludeTag = false;
         }
