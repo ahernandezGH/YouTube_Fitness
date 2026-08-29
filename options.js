@@ -199,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         customTags.splice(index, 1);
         chrome.storage.local.set({ customTags }, () => {
           renderCustomTags();
+          renderPresetFilters();
         });
       });
 
@@ -207,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
       span.appendChild(delBtn);
       customTagsContainer.appendChild(span);
     });
+    renderPresetFiltersForm();
   }
 
   function moveCustomTag(index, direction) {
@@ -216,6 +218,152 @@ document.addEventListener('DOMContentLoaded', () => {
     customTags.splice(newIndex, 0, movedTag);
     chrome.storage.local.set({ customTags }, () => {
       renderCustomTags();
+      renderPresetFilters();
+    });
+  }
+
+  const createPresetBtn = document.getElementById('createPresetBtn');
+  if (createPresetBtn) {
+    createPresetBtn.addEventListener('click', () => {
+      const nameInput = document.getElementById('newPresetName');
+      const name = nameInput ? nameInput.value.trim() : '';
+      if (!name) {
+        alert('Por favor, ingresa un nombre para el filtro preconfigurado.');
+        return;
+      }
+
+      const includeChecked = Array.from(document.querySelectorAll('#presetFormIncludeTags input[type="checkbox"]:checked')).map(cb => cb.value);
+      const excludeChecked = Array.from(document.querySelectorAll('#presetFormExcludeTags input[type="checkbox"]:checked')).map(cb => cb.value);
+
+      if (includeChecked.length === 0 && excludeChecked.length === 0) {
+        alert('Por favor, selecciona al menos una etiqueta para incluir o excluir.');
+        return;
+      }
+
+      const newPreset = {
+        id: 'pf_' + Date.now(),
+        name: name,
+        includeTags: includeChecked,
+        excludeTags: excludeChecked
+      };
+
+      presetFilters.push(newPreset);
+      chrome.storage.local.set({ presetFilters }, () => {
+        if (nameInput) nameInput.value = '';
+        renderPresetFilters();
+        alert(`Filtro "${newPreset.name}" creado con éxito.`);
+      });
+    });
+  }
+
+  function renderPresetFiltersForm() {
+    const formInclude = document.getElementById('presetFormIncludeTags');
+    const formExclude = document.getElementById('presetFormExcludeTags');
+
+    if (formInclude) {
+      formInclude.innerHTML = '';
+      const noTagLabel = document.createElement('label');
+      noTagLabel.style.display = 'flex';
+      noTagLabel.style.alignItems = 'center';
+      noTagLabel.style.gap = '4px';
+      noTagLabel.style.fontSize = '11px';
+      noTagLabel.innerHTML = `<input type="checkbox" value="none"> Sin etiqueta`;
+      formInclude.appendChild(noTagLabel);
+
+      customTags.forEach(tag => {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '4px';
+        label.style.fontSize = '11px';
+        label.innerHTML = `<input type="checkbox" value="${tag}"> ${tag}`;
+        formInclude.appendChild(label);
+      });
+    }
+
+    if (formExclude) {
+      formExclude.innerHTML = '';
+      customTags.forEach(tag => {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '4px';
+        label.style.fontSize = '11px';
+        label.innerHTML = `<input type="checkbox" value="${tag}"> ${tag}`;
+        formExclude.appendChild(label);
+      });
+    }
+  }
+
+  function renderPresetFilters() {
+    renderPresetFiltersForm();
+    const listEl = document.getElementById('presetFiltersList');
+    if (!listEl) return;
+
+    if (presetFilters.length === 0) {
+      listEl.innerHTML = '<div style="font-size: 12px; color: #8b949e; padding: 8px 0;">No tienes filtros preconfigurados aún.</div>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    presetFilters.forEach(p => {
+      const item = document.createElement('div');
+      item.style.display = 'flex';
+      item.style.justifyContent = 'space-between';
+      item.style.alignItems = 'center';
+      item.style.padding = '8px 10px';
+      item.style.background = 'rgba(255, 255, 255, 0.04)';
+      item.style.border = '1px solid var(--card-border)';
+      item.style.borderRadius = '6px';
+      item.style.marginBottom = '6px';
+
+      const info = document.createElement('div');
+      info.style.display = 'flex';
+      info.style.flexDirection = 'column';
+      info.style.gap = '2px';
+
+      const nameEl = document.createElement('div');
+      nameEl.style.fontWeight = '600';
+      nameEl.style.fontSize = '12px';
+      nameEl.textContent = p.name;
+      info.appendChild(nameEl);
+
+      const tagsSummary = document.createElement('div');
+      tagsSummary.style.fontSize = '10px';
+      tagsSummary.style.color = '#8b949e';
+
+      let text = '';
+      if (p.includeTags && p.includeTags.length > 0) {
+        text += `Incluye: ${p.includeTags.map(t => t === 'none' ? 'Sin etiqueta' : t).join(', ')}`;
+      }
+      if (p.excludeTags && p.excludeTags.length > 0) {
+        if (text) text += ' | ';
+        text += `Excluye: ${p.excludeTags.join(', ')}`;
+      }
+      tagsSummary.textContent = text;
+      info.appendChild(tagsSummary);
+      item.appendChild(info);
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = 'Eliminar';
+      delBtn.style.fontSize = '10px';
+      delBtn.style.padding = '3px 6px';
+      delBtn.style.backgroundColor = 'transparent';
+      delBtn.style.color = '#ff6b6b';
+      delBtn.style.border = '1px solid rgba(255, 107, 107, 0.3)';
+      delBtn.style.borderRadius = '4px';
+      delBtn.style.cursor = 'pointer';
+      delBtn.addEventListener('click', () => {
+        if (!confirm(`¿Eliminar filtro "${p.name}"?`)) return;
+        presetFilters = presetFilters.filter(item => item.id !== p.id);
+        chrome.storage.local.set({ presetFilters }, () => {
+          renderPresetFilters();
+        });
+      });
+      item.appendChild(delBtn);
+
+      listEl.appendChild(item);
     });
   }
 });

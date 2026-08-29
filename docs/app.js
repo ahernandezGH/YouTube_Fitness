@@ -356,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
       customTags.push(newTag);
       storage.set({ customTags }, () => {
         renderCustomTags();
+        renderPresetFiltersConfig();
         updateCustomTagFilters();
         document.getElementById('newTagInput').value = '';
       });
@@ -615,6 +616,7 @@ function renderCustomTags() {
       customTags.splice(index, 1);
       storage.set({ customTags }, () => {
         renderCustomTags();
+        renderPresetFiltersConfig();
         updateCustomTagFilters();
         renderVideos();
       });
@@ -632,6 +634,7 @@ function moveCustomTag(index, direction) {
   customTags.splice(newIndex, 0, movedTag);
   storage.set({ customTags }, () => {
     renderCustomTags();
+    renderPresetFiltersConfig();
     updateCustomTagFilters();
     renderVideos();
   });
