@@ -133,6 +133,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Preconfigured Filters Listeners
+  const presetFilterSelect = document.getElementById('presetFilterSelect');
+  if (presetFilterSelect) {
+    presetFilterSelect.addEventListener('change', (e) => {
+      applyPresetFilter(e.target.value);
+    });
+  }
+
+  const saveCurrentFilterBtn = document.getElementById('saveCurrentFilterBtn');
+  if (saveCurrentFilterBtn) {
+    saveCurrentFilterBtn.addEventListener('click', () => {
+      saveCurrentFilterAsPreset();
+    });
+  }
+
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
@@ -626,6 +641,9 @@ function toggleIncludeTag(tag, isChecked) {
   } else {
     selectedIncludeTags = selectedIncludeTags.filter(t => t !== tag);
   }
+  const presetSelect = document.getElementById('presetFilterSelect');
+  if (presetSelect) presetSelect.value = '';
+  activePresetFilterId = '';
   updateFilterButtonLabels();
   renderVideos();
 }
@@ -636,8 +654,62 @@ function toggleExcludeTag(tag, isChecked) {
   } else {
     selectedExcludeTags = selectedExcludeTags.filter(t => t !== tag);
   }
+  const presetSelect = document.getElementById('presetFilterSelect');
+  if (presetSelect) presetSelect.value = '';
+  activePresetFilterId = '';
   updateFilterButtonLabels();
   renderVideos();
+}
+
+function applyPresetFilter(filterId) {
+  activePresetFilterId = filterId || '';
+  if (!filterId) {
+    return;
+  }
+  const preset = presetFilters.find(p => p.id === filterId);
+  if (preset) {
+    selectedIncludeTags = [...(preset.includeTags || [])];
+    selectedExcludeTags = [...(preset.excludeTags || [])];
+    updateCustomTagFilters();
+    renderVideos();
+  }
+}
+
+function saveCurrentFilterAsPreset() {
+  if (selectedIncludeTags.length === 0 && selectedExcludeTags.length === 0) {
+    alert('Selecciona primero al menos una etiqueta para incluir o excluir antes de guardar.');
+    return;
+  }
+  const name = prompt('Ingresa un nombre para este filtro preconfigurado:');
+  if (!name || !name.trim()) return;
+
+  const newPreset = {
+    id: 'pf_' + Date.now(),
+    name: name.trim(),
+    includeTags: [...selectedIncludeTags],
+    excludeTags: [...selectedExcludeTags]
+  };
+
+  presetFilters.push(newPreset);
+  chrome.storage.local.set({ presetFilters }, () => {
+    updatePresetFilterSelect(newPreset.id);
+    alert(`¡Filtro "${newPreset.name}" guardado exitosamente!`);
+  });
+}
+
+function updatePresetFilterSelect(selectedId = activePresetFilterId) {
+  const selectEl = document.getElementById('presetFilterSelect');
+  if (!selectEl) return;
+  selectEl.innerHTML = '<option value="">Personalizado / Manual</option>';
+  presetFilters.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    if (p.id === selectedId) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  activePresetFilterId = selectedId || '';
+  selectEl.value = activePresetFilterId;
 }
 
 function updateFilterButtonLabels() {
@@ -684,6 +756,7 @@ function renderVideos() {
   const typeFilter = document.getElementById('typeFilter').value;
   const levelFilter = document.getElementById('levelFilter').value;
   const channelFilter = document.getElementById('channelFilter').value;
+  const presetFilterContainer = document.getElementById('presetFilterContainer');
   const customTagFilterContainer = document.getElementById('customTagFilterContainer');
   const excludeTagFilterContainer = document.getElementById('excludeTagFilterContainer');
   const videoListEl = document.getElementById('videoList');
@@ -693,7 +766,10 @@ function renderVideos() {
     addVideoForm.style.display = activeTab === 'library' ? 'flex' : 'none';
   }
 
-  const showTagFilters = (activeTab === 'library' && customTags.length > 0);
+  const showTagFilters = (activeTab === 'library' && (customTags.length > 0 || presetFilters.length > 0));
+  if (presetFilterContainer) {
+    presetFilterContainer.style.display = showTagFilters ? 'block' : 'none';
+  }
   if (customTagFilterContainer) {
     customTagFilterContainer.style.display = showTagFilters ? 'block' : 'none';
   }

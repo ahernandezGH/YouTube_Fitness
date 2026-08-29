@@ -293,6 +293,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Preconfigured Filters Listeners
+  const presetFilterSelect = document.getElementById('presetFilterSelect');
+  if (presetFilterSelect) {
+    presetFilterSelect.addEventListener('change', (e) => {
+      applyPresetFilter(e.target.value);
+    });
+  }
+
+  const saveCurrentFilterBtn = document.getElementById('saveCurrentFilterBtn');
+  if (saveCurrentFilterBtn) {
+    saveCurrentFilterBtn.addEventListener('click', () => {
+      saveCurrentFilterAsPreset();
+    });
+  }
+
+  const createPresetBtn = document.getElementById('createPresetBtn');
+  if (createPresetBtn) {
+    createPresetBtn.addEventListener('click', () => {
+      createPresetFromConfigForm();
+    });
+  }
+
   // Theme Toggle Button & Select
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   if (themeToggleBtn) {
@@ -685,6 +707,9 @@ function toggleIncludeTag(tag, isChecked) {
   } else {
     selectedIncludeTags = selectedIncludeTags.filter(t => t !== tag);
   }
+  const presetSelect = document.getElementById('presetFilterSelect');
+  if (presetSelect) presetSelect.value = '';
+  activePresetFilterId = '';
   updateFilterButtonLabels();
   renderVideos();
 }
@@ -695,8 +720,208 @@ function toggleExcludeTag(tag, isChecked) {
   } else {
     selectedExcludeTags = selectedExcludeTags.filter(t => t !== tag);
   }
+  const presetSelect = document.getElementById('presetFilterSelect');
+  if (presetSelect) presetSelect.value = '';
+  activePresetFilterId = '';
   updateFilterButtonLabels();
   renderVideos();
+}
+
+function applyPresetFilter(filterId) {
+  activePresetFilterId = filterId || '';
+  if (!filterId) {
+    return;
+  }
+  const preset = presetFilters.find(p => p.id === filterId);
+  if (preset) {
+    selectedIncludeTags = [...(preset.includeTags || [])];
+    selectedExcludeTags = [...(preset.excludeTags || [])];
+    updateCustomTagFilters();
+    renderVideos();
+  }
+}
+
+function saveCurrentFilterAsPreset() {
+  if (selectedIncludeTags.length === 0 && selectedExcludeTags.length === 0) {
+    alert('Selecciona primero al menos una etiqueta para incluir o excluir antes de guardar.');
+    return;
+  }
+  const name = prompt('Ingresa un nombre para este filtro preconfigurado:');
+  if (!name || !name.trim()) return;
+
+  const newPreset = {
+    id: 'pf_' + Date.now(),
+    name: name.trim(),
+    includeTags: [...selectedIncludeTags],
+    excludeTags: [...selectedExcludeTags]
+  };
+
+  presetFilters.push(newPreset);
+  storage.set({ presetFilters }, () => {
+    renderPresetFiltersConfig();
+    updatePresetFilterSelect(newPreset.id);
+    alert(`¡Filtro "${newPreset.name}" guardado exitosamente!`);
+  });
+}
+
+function createPresetFromConfigForm() {
+  const nameInput = document.getElementById('newPresetName');
+  const name = nameInput ? nameInput.value.trim() : '';
+  if (!name) {
+    alert('Por favor, ingresa un nombre para el filtro preconfigurado.');
+    return;
+  }
+
+  const includeChecked = Array.from(document.querySelectorAll('#presetFormIncludeTags input[type="checkbox"]:checked')).map(cb => cb.value);
+  const excludeChecked = Array.from(document.querySelectorAll('#presetFormExcludeTags input[type="checkbox"]:checked')).map(cb => cb.value);
+
+  if (includeChecked.length === 0 && excludeChecked.length === 0) {
+    alert('Por favor, selecciona al menos una etiqueta para incluir o excluir.');
+    return;
+  }
+
+  const newPreset = {
+    id: 'pf_' + Date.now(),
+    name: name,
+    includeTags: includeChecked,
+    excludeTags: excludeChecked
+  };
+
+  presetFilters.push(newPreset);
+  storage.set({ presetFilters }, () => {
+    if (nameInput) nameInput.value = '';
+    renderPresetFiltersConfig();
+    updatePresetFilterSelect(newPreset.id);
+    alert(`Filtro "${newPreset.name}" creado con éxito.`);
+  });
+}
+
+function deletePresetFilter(filterId) {
+  const preset = presetFilters.find(p => p.id === filterId);
+  if (!preset) return;
+  if (!confirm(`¿Estás seguro de eliminar el filtro "${preset.name}"?`)) return;
+
+  presetFilters = presetFilters.filter(p => p.id !== filterId);
+  if (activePresetFilterId === filterId) {
+    activePresetFilterId = '';
+  }
+  storage.set({ presetFilters }, () => {
+    renderPresetFiltersConfig();
+    updatePresetFilterSelect(activePresetFilterId);
+    renderVideos();
+  });
+}
+
+function updatePresetFilterSelect(selectedId = activePresetFilterId) {
+  const selectEl = document.getElementById('presetFilterSelect');
+  if (!selectEl) return;
+  selectEl.innerHTML = '<option value="">Personalizado / Manual</option>';
+  presetFilters.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    if (p.id === selectedId) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  activePresetFilterId = selectedId || '';
+  selectEl.value = activePresetFilterId;
+}
+
+function renderPresetFiltersConfig() {
+  const formInclude = document.getElementById('presetFormIncludeTags');
+  const formExclude = document.getElementById('presetFormExcludeTags');
+
+  if (formInclude) {
+    formInclude.innerHTML = '';
+    const noTagLabel = document.createElement('label');
+    noTagLabel.innerHTML = `<input type="checkbox" value="none"> Sin etiqueta`;
+    formInclude.appendChild(noTagLabel);
+
+    customTags.forEach(tag => {
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="checkbox" value="${tag}"> ${tag}`;
+      formInclude.appendChild(label);
+    });
+  }
+
+  if (formExclude) {
+    formExclude.innerHTML = '';
+    customTags.forEach(tag => {
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="checkbox" value="${tag}"> ${tag}`;
+      formExclude.appendChild(label);
+    });
+  }
+
+  const listEl = document.getElementById('presetFiltersList');
+  if (!listEl) return;
+
+  if (presetFilters.length === 0) {
+    listEl.innerHTML = '<div class="loading-placeholder" style="padding: 16px;">No tienes filtros preconfigurados aún.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  presetFilters.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'preset-item';
+
+    const info = document.createElement('div');
+    info.className = 'preset-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'preset-name';
+    nameEl.textContent = p.name;
+    info.appendChild(nameEl);
+
+    const tagsSummary = document.createElement('div');
+    tagsSummary.className = 'preset-tags-summary';
+
+    if (p.includeTags && p.includeTags.length > 0) {
+      const incLabel = document.createElement('span');
+      incLabel.style.color = '#8b949e';
+      incLabel.style.fontSize = '11px';
+      incLabel.textContent = 'Incluye: ';
+      tagsSummary.appendChild(incLabel);
+
+      p.includeTags.forEach(t => {
+        const badge = document.createElement('span');
+        badge.className = 'preset-tag-badge include';
+        badge.textContent = t === 'none' ? 'Sin etiqueta' : t;
+        tagsSummary.appendChild(badge);
+      });
+    }
+
+    if (p.excludeTags && p.excludeTags.length > 0) {
+      const excLabel = document.createElement('span');
+      excLabel.style.color = '#8b949e';
+      excLabel.style.fontSize = '11px';
+      if (p.includeTags && p.includeTags.length > 0) excLabel.style.marginLeft = '6px';
+      excLabel.textContent = 'Excluye: ';
+      tagsSummary.appendChild(excLabel);
+
+      p.excludeTags.forEach(t => {
+        const badge = document.createElement('span');
+        badge.className = 'preset-tag-badge exclude';
+        badge.textContent = t;
+        tagsSummary.appendChild(badge);
+      });
+    }
+
+    info.appendChild(tagsSummary);
+    item.appendChild(info);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn-delete-preset';
+    delBtn.textContent = 'Eliminar';
+    delBtn.addEventListener('click', () => {
+      deletePresetFilter(p.id);
+    });
+    item.appendChild(delBtn);
+
+    listEl.appendChild(item);
+  });
 }
 
 function updateFilterButtonLabels() {
@@ -1075,12 +1300,16 @@ function renderVideos() {
   const levelFilter = document.getElementById('levelFilter').value;
   const channelFilter = document.getElementById('channelFilter').value;
   
+  const presetFilterContainer = document.getElementById('presetFilterContainer');
   const customTagFilterContainer = document.getElementById('customTagFilterContainer');
   const excludeTagFilterContainer = document.getElementById('excludeTagFilterContainer');
 
   const videoListEl = document.getElementById('videoList');
   
-  const showTagFilters = (activeTab === 'library' && customTags.length > 0);
+  const showTagFilters = (activeTab === 'library' && (customTags.length > 0 || presetFilters.length > 0));
+  if (presetFilterContainer) {
+    presetFilterContainer.style.display = showTagFilters ? 'flex' : 'none';
+  }
   if (customTagFilterContainer) {
     customTagFilterContainer.style.display = showTagFilters ? 'flex' : 'none';
   }
