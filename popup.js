@@ -31,6 +31,8 @@ let activeTab = 'feed';
 let currentTheme = 'dark';
 let selectedIncludeTags = [];
 let selectedExcludeTags = [];
+let presetFilters = [];
+let activePresetFilterId = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   const feedTabBtn = document.getElementById('feedTabBtn');
@@ -268,12 +270,13 @@ async function loadVideos() {
   const videoListEl = document.getElementById('videoList');
   videoListEl.innerHTML = 'Cargando videos...';
 
-  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount', 'customTags', 'discarded', 'theme'], async (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'library', 'sliceCount', 'offsetCount', 'customTags', 'discarded', 'theme', 'presetFilters'], async (data) => {
     // Theme init
     const savedTheme = data.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     setTheme(savedTheme, false);
 
     library = data.library || [];
+    presetFilters = data.presetFilters || [];
     // Normalización de etiquetas
     let hadNormalization = false;
     library.forEach(item => {
@@ -324,6 +327,7 @@ async function loadVideos() {
       return;
     }
 
+    updatePresetFilterSelect();
     updateCustomTagFilters();
 
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {

@@ -3,8 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const customTagsContainer = document.getElementById('customTagsContainer');
   let channels = [];
   let customTags = [];
+  let presetFilters = [];
 
-  chrome.storage.local.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags', 'theme'], (data) => {
+  chrome.storage.local.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags', 'theme', 'presetFilters'], (data) => {
+    presetFilters = data.presetFilters || [];
+    renderPresetFilters();
+
     const currentTheme = data.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     document.documentElement.setAttribute('data-theme', currentTheme);
     const themeSelectEl = document.getElementById('themeSelect');

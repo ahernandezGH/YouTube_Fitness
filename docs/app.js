@@ -165,6 +165,8 @@ let channels = [];
 let currentTheme = 'dark';
 let selectedIncludeTags = [];
 let selectedExcludeTags = [];
+let presetFilters = [];
+let activePresetFilterId = '';
 
 // Helper function to bypass CORS using a free proxy
 async function fetchProxy(url) {
@@ -478,11 +480,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initial config loading
 function initLoad() {
-  storage.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags', 'discarded', 'library', 'theme'], (data) => {
+  storage.get(['channels', 'minDuration', 'sliceCount', 'offsetCount', 'customTags', 'discarded', 'library', 'theme', 'presetFilters'], (data) => {
     channels = data.channels || [];
     customTags = data.customTags || [];
     discarded = data.discarded || [];
     library = data.library || [];
+    presetFilters = data.presetFilters || [];
 
     // Theme initialization
     const savedTheme = data.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
@@ -495,6 +498,8 @@ function initLoad() {
 
     renderChannels();
     renderCustomTags();
+    renderPresetFiltersConfig();
+    updatePresetFilterSelect();
     updateCustomTagFilters();
     loadVideos();
   });
