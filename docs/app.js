@@ -1046,6 +1046,11 @@ async function loadVideos() {
     library.forEach(item => {
       if (item.id && !uniqueIds.has(item.id)) {
         uniqueIds.add(item.id);
+        // Normalización de categoría
+        if (!item.category) {
+          item.category = (Array.isArray(item.types) && item.types.length > 0) ? item.types[0] : (item.type || 'unknown');
+          hadNormalization = true;
+        }
         // Normalización de etiquetas: customTag -> customTags []
         if (item.customTags === undefined) {
           if (item.customTag && typeof item.customTag === 'string') {
@@ -1260,6 +1265,7 @@ function updateLibraryVideoCategory(videoId, newCategory) {
   const video = library.find(v => v.id === videoId);
   if (video) {
     video.category = newCategory;
+    video.types = [newCategory];
     storage.set({ library }, () => {
       renderVideos();
     });
@@ -1385,7 +1391,8 @@ function renderVideos() {
   } else {
     // Biblioteca
     const filteredVideos = library.filter(v => {
-      const matchType = typeFilter === 'all' || v.category === typeFilter || (Array.isArray(v.types) && v.types.includes(typeFilter));
+      const videoCategory = v.category || (Array.isArray(v.types) && v.types.length > 0 ? v.types[0] : 'unknown');
+      const matchType = typeFilter === 'all' || videoCategory === typeFilter;
       const matchLevel = levelFilter === 'all' || v.level === levelFilter;
       const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
       
