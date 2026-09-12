@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     activeTab = 'feed';
     feedTabBtn.classList.add('active');
     libraryTabBtn.classList.remove('active');
+    updateChannelFilterOptions();
     renderVideos();
   });
 
@@ -50,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     libraryTabBtn.classList.add('active');
     feedTabBtn.classList.remove('active');
     document.getElementById('activeTabAlert').style.display = 'none'; // Hide banner in library
+    updateChannelFilterOptions();
     renderVideos();
   });
 
@@ -320,29 +322,17 @@ async function loadVideos() {
     const sliceCount = data.sliceCount !== undefined ? data.sliceCount : 5;
     const offsetCount = data.offsetCount !== undefined ? data.offsetCount : 0;
 
-    const channelFilterEl = document.getElementById('channelFilter');
-    if (channelFilterEl && data.channels) {
-      const currentSelected = channelFilterEl.value;
-      channelFilterEl.innerHTML = '<option value="all">Todos los canales</option>';
-      data.channels.forEach(ch => {
-        const opt = document.createElement('option');
-        opt.value = ch.name;
-        opt.textContent = ch.name;
-        channelFilterEl.appendChild(opt);
-      });
-      // Agregar opción Manual para los videos agregados por URL
-      const manualOpt = document.createElement('option');
-      manualOpt.value = 'Manual';
-      manualOpt.textContent = 'Manual';
-      channelFilterEl.appendChild(manualOpt);
-      
-      if (Array.from(channelFilterEl.options).some(o => o.value === currentSelected)) {
-        channelFilterEl.value = currentSelected;
-      }
-    }
+    // Normalización de nombres de canal en la biblioteca
+    library.forEach(v => {
+      if (v) v.channelName = (v.channelName || 'Manual').trim();
+    });
+
+    updateChannelFilterOptions();
 
     if (!data.channels || data.channels.length === 0) {
-      videoListEl.innerHTML = 'Falta configuración. Haz clic derecho en el ícono y ve a "Opciones" para agregar canales.';
+      allVideos = [];
+      updateChannelFilterOptions();
+      renderVideos();
       return;
     }
 
@@ -436,6 +426,7 @@ async function loadVideos() {
       return true;
     });
 
+    updateChannelFilterOptions();
     renderVideos();
   });
 }
@@ -554,10 +545,70 @@ function updateLibraryVideoLevel(videoId, newLevel) {
 function updateLibraryVideoChannel(videoId, newChannelName) {
   const video = library.find(v => v.id === videoId);
   if (video) {
-    video.channelName = newChannelName;
+    video.channelName = (newChannelName || 'Manual').trim();
     chrome.storage.local.set({ library }, () => {
+      updateChannelFilterOptions();
       renderVideos();
     });
+  }
+}
+
+function updateChannelFilterOptions() {
+  const channelFilterEl = document.getElementById('channelFilter');
+  if (!channelFilterEl) return;
+
+  const currentSelected = (channelFilterEl.value || 'all').trim();
+
+  const channelMap = new Map();
+
+  (userChannels || []).forEach(ch => {
+    if (ch && ch.name && ch.name.trim()) {
+      const trimmed = ch.name.trim();
+      channelMap.set(trimmed.toLowerCase(), trimmed);
+    }
+  });
+
+  (library || []).forEach(v => {
+    if (v && v.channelName && v.channelName.trim()) {
+      const trimmed = v.channelName.trim();
+      if (!channelMap.has(trimmed.toLowerCase())) {
+        channelMap.set(trimmed.toLowerCase(), trimmed);
+      }
+    }
+  });
+
+  (allVideos || []).forEach(v => {
+    if (v && v.channelName && v.channelName.trim()) {
+      const trimmed = v.channelName.trim();
+      if (!channelMap.has(trimmed.toLowerCase())) {
+        channelMap.set(trimmed.toLowerCase(), trimmed);
+      }
+    }
+  });
+
+  if (!channelMap.has('manual')) {
+    channelMap.set('manual', 'Manual');
+  }
+
+  const sortedNames = Array.from(channelMap.values()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+  channelFilterEl.innerHTML = '<option value="all">Todos los canales</option>';
+  sortedNames.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    channelFilterEl.appendChild(opt);
+  });
+
+  if (currentSelected && currentSelected !== 'all') {
+    const matchingOption = Array.from(channelFilterEl.options).find(o => o.value.toLowerCase().trim() === currentSelected.toLowerCase());
+    if (matchingOption) {
+      channelFilterEl.value = matchingOption.value;
+    } else {
+      channelFilterEl.value = 'all';
+    }
+  } else {
+    channelFilterEl.value = 'all';
   }
 }
 
@@ -774,9 +825,10 @@ function updateFilterButtonLabels() {
 }
 
 function renderVideos() {
-  const typeFilter = document.getElementById('typeFilter').value;
-  const levelFilter = document.getElementById('levelFilter').value;
-  const channelFilter = document.getElementById('channelFilter').value;
+  const typeFilter = (document.getElementById('typeFilter')?.value || 'all').trim();
+  const levelFilter = (document.getElementById('levelFilter')?.value || 'all').trim();
+  const channelFilter = (document.getElementById('channelFilter')?.value || 'all').trim();
+  
   const presetFilterContainer = document.getElementById('presetFilterContainer');
   const customTagFilterContainer = document.getElementById('customTagFilterContainer');
   const excludeTagFilterContainer = document.getElementById('excludeTagFilterContainer');
@@ -802,9 +854,9 @@ function renderVideos() {
 
   if (activeTab === 'feed') {
     const filteredVideos = allVideos.filter(v => {
-      const matchType = typeFilter === 'all' || v.types.includes(typeFilter);
-      const matchLevel = levelFilter === 'all' || v.level === levelFilter;
-      const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
+      const matchType = typeFilter === 'all' || (Array.isArray(v.types) && v.types.some(t => (t || '').toLowerCase().trim() === typeFilter.toLowerCase()));
+      const matchLevel = levelFilter === 'all' || (v.level || '').toLowerCase().trim() === levelFilter.toLowerCase();
+      const matchChannel = channelFilter === 'all' || (v.channelName || '').toLowerCase().trim() === channelFilter.toLowerCase();
       return matchType && matchLevel && matchChannel;
     });
 
@@ -848,9 +900,9 @@ function renderVideos() {
     // Biblioteca
     const filteredVideos = library.filter(v => {
       const videoCategory = v.category || (Array.isArray(v.types) && v.types.length > 0 ? v.types[0] : 'unknown');
-      const matchType = typeFilter === 'all' || videoCategory === typeFilter;
-      const matchLevel = levelFilter === 'all' || v.level === levelFilter;
-      const matchChannel = channelFilter === 'all' || v.channelName === channelFilter;
+      const matchType = typeFilter === 'all' || (videoCategory || '').toLowerCase().trim() === typeFilter.toLowerCase();
+      const matchLevel = levelFilter === 'all' || (v.level || '').toLowerCase().trim() === levelFilter.toLowerCase();
+      const matchChannel = channelFilter === 'all' || (v.channelName || '').toLowerCase().trim() === channelFilter.toLowerCase();
       
       const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
       const videoTagsLower = videoTags.map(t => (t || '').toString().toLowerCase().trim());
@@ -866,8 +918,9 @@ function renderVideos() {
 
       let matchExcludeTag = true;
       if (selectedExcludeTags.length > 0) {
-        const hasExcludedTag = selectedExcludeTags.some(t => t !== 'none' && videoTagsLower.includes(t.toLowerCase().trim()));
-        if (hasExcludedTag) {
+        const excludeNoTag = selectedExcludeTags.includes('none') && videoTags.length === 0;
+        const excludeSpecificTag = selectedExcludeTags.some(t => t !== 'none' && videoTagsLower.includes(t.toLowerCase().trim()));
+        if (excludeNoTag || excludeSpecificTag) {
           matchExcludeTag = false;
         }
       }
@@ -905,10 +958,26 @@ function renderVideos() {
         return `<option value="${key}" ${v.level === key ? 'selected' : ''}>${key.toUpperCase()}</option>`;
       }).join('');
 
-      const channelOptions = userChannels.map(ch => {
-        return `<option value="${ch.name}" ${v.channelName === ch.name ? 'selected' : ''}>${ch.name}</option>`;
+      const cardChannelMap = new Map();
+      (userChannels || []).forEach(ch => {
+        if (ch && ch.name && ch.name.trim()) {
+          const trimmed = ch.name.trim();
+          cardChannelMap.set(trimmed.toLowerCase(), trimmed);
+        }
+      });
+      cardChannelMap.set('manual', 'Manual');
+      if (v.channelName && v.channelName.trim()) {
+        const currentTrimmed = v.channelName.trim();
+        if (!cardChannelMap.has(currentTrimmed.toLowerCase())) {
+          cardChannelMap.set(currentTrimmed.toLowerCase(), currentTrimmed);
+        }
+      }
+
+      const videoChannelLower = (v.channelName || 'Manual').trim().toLowerCase();
+      const channelOptions = Array.from(cardChannelMap.values()).map(chName => {
+        const isSelected = chName.toLowerCase() === videoChannelLower;
+        return `<option value="${chName}" ${isSelected ? 'selected' : ''}>${chName}</option>`;
       }).join('');
-      const manualOption = `<option value="Manual" ${v.channelName === 'Manual' ? 'selected' : ''}>Manual</option>`;
 
       const videoTags = Array.isArray(v.customTags) ? v.customTags : (v.customTag ? [v.customTag] : []);
       const tagPillsHtml = videoTags.map(t => {
@@ -931,7 +1000,6 @@ function renderVideos() {
             <span class="badge priority">Prio: ${v.priority}</span>
             <select class="library-channel-select badge" data-id="${v.id}" style="background:var(--card-bg); border:1px solid #444; color:var(--text-color); cursor:pointer;">
               ${channelOptions}
-              ${manualOption}
             </select>
             <select class="library-level-select badge" data-id="${v.id}" style="background:var(--card-bg); border:1px solid #444; color:var(--text-color); cursor:pointer;">
               ${levelOptions}
